@@ -4,7 +4,7 @@ datasources:
   - name: Prometheus
     type: prometheus
     uid: prometheus
-    url: http://localhost:9090
+    url: http://${PROMETHEUS_HOST}:{PROMETHEUS_PORT}
     jsonData:
       timeInterval: 60s
       exemplarTraceIdDestinations:
@@ -15,7 +15,7 @@ datasources:
   - name: Tempo
     type: tempo
     uid: tempo
-    url: http://localhost:3200
+    url: http://${TEMPO_HOST}:${TEMPO_PORT}
     jsonData:
       tracesToLogsV2:
         customQuery: true
@@ -37,7 +37,7 @@ datasources:
   - name: Loki
     type: loki
     uid: loki
-    url: http://localhost:3100
+    url: http://${LOKI_HOST}:${LOKI_PORT}
     jsonData:
       derivedFields:
         - name: "trace_id"

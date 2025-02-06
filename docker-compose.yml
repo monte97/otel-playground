@@ -96,11 +96,15 @@ services:
     image: grafana/loki:latest
     container_name: lgtm_loki
     user: root
+    environment:
+      - ALERTMANAGER_HOST=alertmanager
+      - ALERTMANAGER_PORT=9093
     ports:
       - "3100:3100"
-    command: -config.file=/etc/loki/loki-config.yaml
+    entrypoint: /etc/loki/entrypoint.sh  # Ensure this is the correct path to entrypoint.sh
     volumes:
-      - ./configs/loki/loki-config.yaml:/etc/loki/loki-config.yaml
+      - ./configs/loki/entrypoint.sh:/etc/loki/entrypoint.sh
+      - ./configs/loki/loki-config.yaml.template:/etc/loki/loki-config.yaml.template
       - loki_data:/data:rw
 
   tempo:
@@ -142,11 +146,19 @@ services:
     environment:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin
+      - PROMETHEUS_HOST=prometheus
+      - PROMETHEUS_PORT=9090
+      - TEMPO_HOST=tempo
+      - TEMPO_PORT=3200
+      - LOKI_HOST=loki
+      - LOKI_PORT=3100
     volumes:
       - grafana_data:/var/lib/grafana
+      - ./configs/grafana/provisioning/entrypoint.sh:/etc/grafana/provisioning/entrypoint.sh
       - ./configs/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
       - ./configs/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
       - ./configs/grafana/dashboards:/var/lib/grafana/dashboards
+    entrypoint: /etc/grafana/provisioning/entrypoint.sh
     depends_on:
       - loki
       - tempo

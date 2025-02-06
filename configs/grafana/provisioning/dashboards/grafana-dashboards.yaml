@@ -4,15 +4,15 @@ providers:
   - name: "RED Metrics (classic histogram)"
     type: file
     options:
-      path: /otel-lgtm/grafana-dashboard-red-metrics-classic.json
+      path: /var/lib/grafana/dashboards/grafana-dashboard-red-metrics-classic.json
       foldersFromFilesStructure: false
   - name: "RED Metrics (exponential/native histogram)"
     type: file
     options:
-      path: /otel-lgtm/grafana-dashboard-red-metrics-native.json
+      path: /var/lib/grafana/dashboards/grafana-dashboard-red-metrics-native.json
       foldersFromFilesStructure: false
   - name: "JVM Metrics"
     type: file
     options:
-      path: /otel-lgtm/grafana-dashboard-jvm-metrics.json
+      path: /var/lib/grafana/dashboards/grafana-dashboard-jvm-metrics.json
       foldersFromFilesStructure: false
