@@ -12,8 +12,11 @@ PASSWORD=SecurePass123
 .PHONY: help start create-user get-users get-user update-user delete-user
 
 start:
-	docker-compose down --volumes
+	docker-compose down
 	docker-compose up --build -d
+
+stop:
+	docker-compose down
 
 help:
 	@echo "Available commands:"

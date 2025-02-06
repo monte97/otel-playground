@@ -91,6 +91,81 @@ services:
       - OTEL_COLLECTOR_HOST
       - OTEL_COLLECTOR_PORT_GRPC
       - OTEL_COLLECTOR_PORT_HTTP
+    
+  loki:
+    image: grafana/loki:latest
+    container_name: lgtm_loki
+    user: root
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/loki-config.yaml
+    volumes:
+      - ./configs/loki/loki-config.yaml:/etc/loki/loki-config.yaml
+      - loki_data:/data:rw
+
+  tempo:
+    image: grafana/tempo:latest
+    container_name: lgtm_tempo
+    user: root
+    ports:
+      - "3200:3200"
+    command: -config.file=/etc/tempo/tempo-config.yaml
+    volumes:
+      - ./configs/tempo/tempo-config.yaml:/etc/tempo/tempo-config.yaml
+      - tempo_data:/data
+    
+  prometheus:
+    image: prom/prometheus:latest  # Replace with the actual version or an environment variable
+    container_name: prometheus
+    user: root
+    ports:
+      - "9090:9090"  # Exposes Prometheus UI on port 9090
+    volumes:
+      - ./configs/prometheus/prometheus.yaml:/etc/prometheus/prometheus.yaml  # Prometheus configuration file
+      - prometheus_data:/data/prometheus  # Persistent storage for Prometheus data
+    command: >
+      --web.enable-remote-write-receiver
+      --web.enable-otlp-receiver
+      --enable-feature=exemplar-storage
+      --enable-feature=native-histograms
+      --storage.tsdb.path=/data/prometheus
+      --config.file=/etc/prometheus/prometheus.yaml
+    environment:
+      - ENABLE_LOGS_PROMETHEUS=${ENABLE_LOGS_PROMETHEUS:-false}  # Optional: Enable logging through environment variable
+    restart: unless-stopped  # Ensures Prometheus restarts unless stopped manually
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: lgtm_grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./configs/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+      - ./configs/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+      - ./configs/grafana/dashboards:/var/lib/grafana/dashboards
+    depends_on:
+      - loki
+      - tempo
+      - prometheus
+
+
+  # mimir:
+  #   image: grafana/mimir:latest
+  #   container_name: lgtm_mimir
+  #   ports:
+  #     - "9009:9009"
+  #   command: -config.file=/etc/mimir/mimir-config.yaml
+  #   volumes:
+  #     - ./mimir-config.yaml:/etc/mimir/mimir-config.yaml
+
 
 volumes:
   db_data:
+  grafana_data:
+  loki_data:
+  tempo_data:
+  prometheus_data:
