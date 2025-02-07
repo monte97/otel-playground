@@ -7,9 +7,9 @@ distributor:
     otlp:
       protocols:
         grpc:
-          endpoint: "otel-collector:4317"
+          endpoint: "${OTEL_COLLECTOR_HOST}:${OTEL_COLLECTOR_PORT_GRPC}"
         http:
-          endpoint: "otel-collector:4318"
+          endpoint: "${OTEL_COLLECTOR_HOST}:${OTEL_COLLECTOR_PORT_HTTP}"
 
 storage:
   trace:
@@ -33,7 +33,7 @@ metrics_generator:
   storage:
     path: /data/tempo/generator/wal
     remote_write:
-      - url: http://prometheus:9090/api/v1/write
+      - url: http://${PROMETHEUS_HOST}:${PROMETHEUS_PORT}/api/v1/write
         send_exemplars: true
 
 overrides:

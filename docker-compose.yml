@@ -113,11 +113,19 @@ services:
     user: root
     ports:
       - "3200:3200"
-    command: -config.file=/etc/tempo/tempo-config.yaml
     volumes:
-      - ./configs/tempo/tempo-config.yaml:/etc/tempo/tempo-config.yaml
-      - tempo_data:/data
-    
+      #- ./configs/tempo/tempo-config.yaml.template:/etc/tempo/tempo-config.yaml.template  # Mount template file
+      - ./configs/tempo/tempo-config.yaml:/etc/tempo/tempo-config.yaml  # Mount template file
+      - tempo_data:/data  # Persistent data volume
+      # - ./configs/tempo/entrypoint.sh:/etc/tempo/entrypoint.sh  # Mount entrypoint script
+    command: -config.file=/etc/tempo/tempo-config.yaml  # This will use the processed config file
+    environment:
+      - OTEL_HOST=localhost
+      - OTEL_GRPC_PORT=134
+      - PROMETHEUS_HOST=localhost
+      - PROMETHEUS_PORT=1234
+    restart: unless-stopped
+      
   prometheus:
     image: prom/prometheus:latest  # Replace with the actual version or an environment variable
     container_name: prometheus
