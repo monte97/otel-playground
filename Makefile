@@ -38,6 +38,9 @@ create-user:
 get-users:
 	@curl -X GET "$(API_URL)" -H "$(CONTENT_TYPE)" | jq
 
+get-ping:
+	@curl -X GET http://localhost:8090/ping -H "$(CONTENT_TYPE)"
+
 # Retrieve a Single User
 get-user:
 	@if [ -z "$(ID)" ]; then echo "Usage: make get-user ID=<id>"; exit 1; fi

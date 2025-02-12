@@ -25,6 +25,8 @@ services:
         condition: service_started
       php-api-db:
         condition: service_healthy
+    networks:
+      - application
 
   php-api-db:
     image: mysql:8.0
@@ -45,6 +47,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks: 
+      - application
 
   phpmyadmin:
     image: phpmyadmin/phpmyadmin
@@ -54,15 +58,8 @@ services:
     environment:
       PMA_HOST: php-api-db
       MYSQL_ROOT_PASSWORD: root
-
-  jaeger:
-    image: jaegertracing/all-in-one:1.50
-    container_name: jaeger
-    restart: always
-    ports:
-      - "16686:16686"  # Jaeger UI
-      - "14250:14250"  # OTLP HTTP
-      - "4318:4317"    # OTLP gRPC
+    networks: 
+      - application
 
   otel-collector:
     image: ${COLLECTOR_CONTRIB_IMAGE}
@@ -80,58 +77,63 @@ services:
       - ${OTEL_COLLECTOR_CONFIG}:/etc/otelcol-config.yml
       - ${OTEL_COLLECTOR_CONFIG_EXTRAS}:/etc/otelcol-config-extras.yml
     ports:
-      - "${OTEL_COLLECTOR_PORT_GRPC}"
-      - "${OTEL_COLLECTOR_PORT_HTTP}"
-    depends_on:
-      jaeger:
-        condition: service_started
+      - "${OTEL_COLLECTOR_PORT_GRPC}:4317"
+      - "${OTEL_COLLECTOR_PORT_HTTP}:4318"
     environment:
-      - ENVOY_PORT
-      - HOST_FILESYSTEM
-      - OTEL_COLLECTOR_HOST
-      - OTEL_COLLECTOR_PORT_GRPC
-      - OTEL_COLLECTOR_PORT_HTTP
-    
+      - OTEL_COLLECTOR_HOST=${OTEL_COLLECTOR_HOST}
+      - OTEL_COLLECTOR_PORT_GRPC=${OTEL_COLLECTOR_PORT_GRPC}
+      - OTEL_COLLECTOR_PORT_HTTP=${OTEL_COLLECTOR_PORT_HTTP}
+      - PROMETHEUS_HOST=${PROMETHEUS_HOST}
+      - PROMETHEUS_PORT=${PROMETHEUS_PORT}
+      - TEMPO_HOST=${TEMPO_HOST}
+      - TEMPO_PORT_HTTP=${TEMPO_PORT_HTTP}
+      - TEMPO_PORT_GRPC=${TEMPO_PORT_GRPC}
+      - LOKI_HOST=${LOKI_HOST}
+      - LOKI_PORT=${LOKI_PORT}
+    networks:
+      - monitoring
+      - application
+
   loki:
     image: grafana/loki:latest
     container_name: lgtm_loki
     user: root
     environment:
-      - ALERTMANAGER_HOST=alertmanager
-      - ALERTMANAGER_PORT=9093
-    ports:
-      - "3100:3100"
+      - ALERTMANAGER_HOST=${ALERTMANAGER_HOST}
+      - ALERTMANAGER_PORT=${ALERTMANAGER_PORT}
+    depends_on:
+      - otel-collector
     entrypoint: /etc/loki/entrypoint.sh  # Ensure this is the correct path to entrypoint.sh
     volumes:
       - ./configs/loki/entrypoint.sh:/etc/loki/entrypoint.sh
       - ./configs/loki/loki-config.yaml.template:/etc/loki/loki-config.yaml.template
       - loki_data:/data:rw
+    networks:
+      - monitoring
 
   tempo:
     image: grafana/tempo:latest
     container_name: lgtm_tempo
     user: root
     ports:
-      - "3200:3200"
+      - 3200:3200
+      - 14317:4317
     volumes:
       #- ./configs/tempo/tempo-config.yaml.template:/etc/tempo/tempo-config.yaml.template  # Mount template file
       - ./configs/tempo/tempo-config.yaml:/etc/tempo/tempo-config.yaml  # Mount template file
       - tempo_data:/data  # Persistent data volume
       # - ./configs/tempo/entrypoint.sh:/etc/tempo/entrypoint.sh  # Mount entrypoint script
     command: -config.file=/etc/tempo/tempo-config.yaml  # This will use the processed config file
-    environment:
-      - OTEL_HOST=localhost
-      - OTEL_GRPC_PORT=134
-      - PROMETHEUS_HOST=localhost
-      - PROMETHEUS_PORT=1234
+    depends_on:
+      - otel-collector
     restart: unless-stopped
+    networks:
+      - monitoring
       
   prometheus:
     image: prom/prometheus:latest  # Replace with the actual version or an environment variable
     container_name: prometheus
     user: root
-    ports:
-      - "9090:9090"  # Exposes Prometheus UI on port 9090
     volumes:
       - ./configs/prometheus/prometheus.yaml:/etc/prometheus/prometheus.yaml  # Prometheus configuration file
       - prometheus_data:/data/prometheus  # Persistent storage for Prometheus data
@@ -145,6 +147,10 @@ services:
     environment:
       - ENABLE_LOGS_PROMETHEUS=${ENABLE_LOGS_PROMETHEUS:-false}  # Optional: Enable logging through environment variable
     restart: unless-stopped  # Ensures Prometheus restarts unless stopped manually
+    depends_on:
+      - otel-collector
+    networks:
+      - monitoring
 
   grafana:
     image: grafana/grafana:latest
@@ -167,21 +173,13 @@ services:
       - ./configs/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
       - ./configs/grafana/dashboards:/var/lib/grafana/dashboards
     entrypoint: /etc/grafana/provisioning/entrypoint.sh
+    networks:
+      - monitoring
     depends_on:
       - loki
       - tempo
       - prometheus
-
-
-  # mimir:
-  #   image: grafana/mimir:latest
-  #   container_name: lgtm_mimir
-  #   ports:
-  #     - "9009:9009"
-  #   command: -config.file=/etc/mimir/mimir-config.yaml
-  #   volumes:
-  #     - ./mimir-config.yaml:/etc/mimir/mimir-config.yaml
-
+      - otel-collector
 
 volumes:
   db_data:
@@ -189,3 +187,8 @@ volumes:
   loki_data:
   tempo_data:
   prometheus_data:
+
+networks:
+  monitoring:
+    driver: bridge
+  application:

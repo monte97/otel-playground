@@ -1,6 +1,3 @@
-# Copyright The OpenTelemetry Authors
-# SPDX-License-Identifier: Apache-2.0
-
 receivers:
   otlp:
     protocols:
@@ -12,85 +9,56 @@ receivers:
           allowed_origins:
             - "http://*"
             - "https://*"
-  docker_stats:
-    endpoint: unix:///var/run/docker.sock
-  # Host metrics
-  hostmetrics:
-    root_path: /hostfs
-    scrapers:
-      cpu:
-        metrics:
-          system.cpu.utilization:
-            enabled: true
-      disk:
-      load:
-      filesystem:
-        exclude_mount_points:
-          mount_points:
-            - /dev/*
-            - /proc/*
-            - /sys/*
-            - /run/k3s/containerd/*
-            - /var/lib/docker/*
-            - /var/lib/kubelet/*
-            - /snap/*
-          match_type: regexp
-        exclude_fs_types:
-          fs_types:
-            - autofs
-            - binfmt_misc
-            - bpf
-            - cgroup2
-            - configfs
-            - debugfs
-            - devpts
-            - devtmpfs
-            - fusectl
-            - hugetlbfs
-            - iso9660
-            - mqueue
-            - nsfs
-            - overlay
-            - proc
-            - procfs
-            - pstore
-            - rpc_pipefs
-            - securityfs
-            - selinuxfs
-            - squashfs
-            - sysfs
-            - tracefs
-          match_type: strict
-      memory:
-        metrics:
-          system.memory.utilization:
-            enabled: true
-      network:
-      paging:
-      processes:
-      process:
-        mute_process_exe_error: true
-        mute_process_io_error: true
-        mute_process_user_error: true
-  # Collector metrics
-  
-
-exporters:
-  debug:
-  otlp:
-    endpoint: "jaeger:4317"
-    tls:
-      insecure: true
+  prometheus/collector:
+    config:
+      scrape_configs:
+        - job_name: "opentelemetry-collector"
+          static_configs:
+            - targets: ["localhost:8888"]
 
 processors:
   batch:
 
-connectors:
-  spanmetrics:
+exporters:
+  otlphttp/metrics:
+    endpoint: http://${env:PROMETHEUS_HOST}:${env:PROMETHEUS_PORT}/api/v1/otlp
+    tls:
+      insecure: true
+  otlphttp/traces:
+    endpoint: http://lgtm_tempo:4317
+    tls:
+      insecure: true
+  otlp/grpc_traces:             # Add this exporter for gRPC traces
+    endpoint: lgtm_tempo:4317  # gRPC endpoint for Tempo
+    tls:
+      insecure: true   
+  otlphttp/logs:
+    endpoint: http://${env:LOKI_HOST}:${env:LOKI_PORT}/otlp
+    tls:
+      insecure: true
+  debug/metrics:
+    verbosity: detailed
+  debug/traces:
+    verbosity: detailed
+  debug/logs:
+    verbosity: detailed
 
 service:
   pipelines:
     traces:
       receivers: [otlp]
       processors: [batch]
-      exporters: [otlp, debug]
+      #exporters: [otlphttp/traces]
+      exporters: [otlp/grpc_traces,debug/traces]
+      #exporters: [otlphttp/traces,debug/traces]
+
+    metrics:
+      receivers: [otlp, prometheus/collector]
+      processors: [batch]
+      exporters: [otlphttp/metrics]
+      #exporters: [otlphttp/metrics,debug/metrics]
+    logs:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlphttp/logs]
+      #exporters: [otlphttp/logs,debug/logs]
