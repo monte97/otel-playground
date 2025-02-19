@@ -24,12 +24,8 @@ exporters:
     endpoint: http://${env:PROMETHEUS_HOST}:${env:PROMETHEUS_PORT}/api/v1/otlp
     tls:
       insecure: true
-  otlphttp/traces:
-    endpoint: http://lgtm_tempo:4317
-    tls:
-      insecure: true
-  otlp/grpc_traces:             # Add this exporter for gRPC traces
-    endpoint: lgtm_tempo:4317  # gRPC endpoint for Tempo
+  otlp/traces:             # Add this exporter for gRPC traces
+    endpoint: ${env:TEMPO_HOST}:${env:TEMPO_PORT_OLTP}  # gRPC endpoint for Tempo
     tls:
       insecure: true   
   otlphttp/logs:
@@ -49,8 +45,7 @@ service:
       receivers: [otlp]
       processors: [batch]
       #exporters: [otlphttp/traces]
-      exporters: [otlp/grpc_traces,debug/traces]
-      #exporters: [otlphttp/traces,debug/traces]
+      exporters: [otlp/traces,debug/traces]
 
     metrics:
       receivers: [otlp, prometheus/collector]

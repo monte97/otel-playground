@@ -87,7 +87,7 @@ services:
       - PROMETHEUS_PORT=${PROMETHEUS_PORT}
       - TEMPO_HOST=${TEMPO_HOST}
       - TEMPO_PORT_HTTP=${TEMPO_PORT_HTTP}
-      - TEMPO_PORT_GRPC=${TEMPO_PORT_GRPC}
+      - TEMPO_PORT_OLTP=${TEMPO_PORT_OLTP}
       - LOKI_HOST=${LOKI_HOST}
       - LOKI_PORT=${LOKI_PORT}
     networks:
@@ -95,7 +95,7 @@ services:
       - application
 
   loki:
-    image: grafana/loki:latest
+    image: ${LOKI_IMAGE}
     container_name: lgtm_loki
     user: root
     environment:
@@ -112,7 +112,7 @@ services:
       - monitoring
 
   tempo:
-    image: grafana/tempo:latest
+    image: ${TEMPO_IMAGE}
     container_name: lgtm_tempo
     user: root
     ports:
@@ -131,7 +131,7 @@ services:
       - monitoring
       
   prometheus:
-    image: prom/prometheus:latest  # Replace with the actual version or an environment variable
+    image: ${PROMETHEUS_IMAGE}
     container_name: prometheus
     user: root
     volumes:
@@ -153,7 +153,7 @@ services:
       - monitoring
 
   grafana:
-    image: grafana/grafana:latest
+    image: ${GRAFANA_IMAGE}
     container_name: lgtm_grafana
     ports:
       - "3000:3000"
