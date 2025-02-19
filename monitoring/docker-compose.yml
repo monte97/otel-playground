@@ -1,66 +1,7 @@
 version: '3.8'
 
 services:
-  php-api:
-    build: 
-      context: quote
-      dockerfile: Dockerfile
-    container_name: php-api
-    deploy:
-      resources:
-        limits:
-          memory: 40M
-    restart: unless-stopped
-    ports:
-      - "${QUOTE_PORT}:${QUOTE_PORT}"
-    environment:
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://${OTEL_COLLECTOR_HOST}:${OTEL_COLLECTOR_PORT_HTTP}
-      - OTEL_PHP_AUTOLOAD_ENABLED=true
-      - QUOTE_PORT
-      - OTEL_RESOURCE_ATTRIBUTES
-      - OTEL_SERVICE_NAME=quote
-      - OTEL_PHP_INTERNAL_METRICS_ENABLED=true
-    depends_on:
-      otel-collector:
-        condition: service_started
-      php-api-db:
-        condition: service_healthy
-    networks:
-      - application
-
-  php-api-db:
-    image: mysql:8.0
-    container_name: php-api-db
-    restart: always
-    environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: mydatabase
-      MYSQL_USER: user
-      MYSQL_PASSWORD: password
-    ports:
-      - "3306:3306"
-    volumes:
-      - db_data:/var/lib/mysql
-      - ./php-api-db/init.sql:/docker-entrypoint-initdb.d/init.sql
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uuser", "-ppassword"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks: 
-      - application
-
-  phpmyadmin:
-    image: phpmyadmin/phpmyadmin
-    restart: always
-    ports:
-      - "8081:80"
-    environment:
-      PMA_HOST: php-api-db
-      MYSQL_ROOT_PASSWORD: root
-    networks: 
-      - application
-
+  
   otel-collector:
     image: ${COLLECTOR_CONTRIB_IMAGE}
     container_name: otel-collector
@@ -92,7 +33,6 @@ services:
       - LOKI_PORT=${LOKI_PORT}
     networks:
       - monitoring
-      - application
 
   loki:
     image: ${LOKI_IMAGE}
@@ -182,7 +122,6 @@ services:
       - otel-collector
 
 volumes:
-  db_data:
   grafana_data:
   loki_data:
   tempo_data:
@@ -191,4 +130,3 @@ volumes:
 networks:
   monitoring:
     driver: bridge
-  application:
