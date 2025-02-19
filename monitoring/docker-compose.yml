@@ -102,7 +102,7 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=admin
       - PROMETHEUS_HOST=prometheus
       - PROMETHEUS_PORT=9090
-      - TEMPO_HOST=tempo
+      - TEMPO_HOST=lgtm_tempo
       - TEMPO_PORT=3200
       - LOKI_HOST=loki
       - LOKI_PORT=3100
