@@ -21,8 +21,6 @@ services:
       - OTEL_SERVICE_NAME=quote
       - OTEL_PHP_INTERNAL_METRICS_ENABLED=true
     depends_on:
-      otel-collector:
-        condition: service_started
       php-api-db:
         condition: service_healthy
 
@@ -54,43 +52,6 @@ services:
     environment:
       PMA_HOST: php-api-db
       MYSQL_ROOT_PASSWORD: root
-
-  jaeger:
-    image: jaegertracing/all-in-one:1.50
-    container_name: jaeger
-    restart: always
-    ports:
-      - "16686:16686"  # Jaeger UI
-      - "14250:14250"  # OTLP HTTP
-      - "4318:4317"    # OTLP gRPC
-
-  otel-collector:
-    image: ${COLLECTOR_CONTRIB_IMAGE}
-    container_name: otel-collector
-    deploy:
-      resources:
-        limits:
-          memory: 200M
-    restart: unless-stopped
-    command: [ "--config=/etc/otelcol-config.yml", "--config=/etc/otelcol-config-extras.yml" ]
-    user: 0:0
-    volumes:
-      - ${HOST_FILESYSTEM}:/hostfs:ro
-      - ${DOCKER_SOCK}:/var/run/docker.sock:ro
-      - ${OTEL_COLLECTOR_CONFIG}:/etc/otelcol-config.yml
-      - ${OTEL_COLLECTOR_CONFIG_EXTRAS}:/etc/otelcol-config-extras.yml
-    ports:
-      - "${OTEL_COLLECTOR_PORT_GRPC}"
-      - "${OTEL_COLLECTOR_PORT_HTTP}"
-    depends_on:
-      jaeger:
-        condition: service_started
-    environment:
-      - ENVOY_PORT
-      - HOST_FILESYSTEM
-      - OTEL_COLLECTOR_HOST
-      - OTEL_COLLECTOR_PORT_GRPC
-      - OTEL_COLLECTOR_PORT_HTTP
 
 volumes:
   db_data:

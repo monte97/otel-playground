@@ -48,6 +48,21 @@ return function (App $app) {
         return respondWithJson($response, $users);
     });
 
+    $app->get('/ping', function (Request $request, Response $response, PDO $db, LoggerInterface $logger) {
+        $tracer = Globals::tracerProvider()->getTracer('user-service');
+        $span = $tracer->spanBuilder('PING')->setSpanKind(SpanKind::KIND_SERVER)->startSpan();
+
+        $span->addEvent('Fetching all users');
+
+        $users = array(
+            "foo" => "bar",
+            "bar" => "foo",
+        );
+
+        return respondWithJson($response, $users);
+    });
+
+
     // 🔹 READ Single User
     $app->get('/users/{id}', function (Request $request, Response $response, PDO $db, LoggerInterface $logger) {
         $span = Span::getCurrent();

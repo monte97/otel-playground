@@ -1,3 +1,4 @@
+SHELL := /bin/bash
 
 # API Configuration
 API_URL=http://localhost:8090/users
@@ -12,8 +13,12 @@ PASSWORD=SecurePass123
 .PHONY: help start create-user get-users get-user update-user delete-user
 
 start:
-	docker-compose down --volumes
+	docker-compose down
+	export $(echo $(cat .env | sed 's/#.*//g' | sed 's/\r//g' | xargs) | envsubst)
 	docker-compose up --build -d
+
+stop:
+	docker-compose down
 
 help:
 	@echo "Available commands:"
@@ -31,6 +36,9 @@ create-user:
 # Retrieve All Users
 get-users:
 	@curl -X GET "$(API_URL)" -H "$(CONTENT_TYPE)" | jq
+
+get-ping:
+	@curl -X GET http://localhost:8090/ping -H "$(CONTENT_TYPE)"
 
 # Retrieve a Single User
 get-user:
