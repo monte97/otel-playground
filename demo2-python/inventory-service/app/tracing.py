@@ -1,24 +1,23 @@
 import os
 from opentelemetry import trace
-from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
-#from opentelemetry.instrumentation.motor import MotorInstrumentor
-from opentelemetry.exporter.otlp.proto.grpc.exporter import OTLPSpanExporter
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
-from opentelemetry.sdk.resources import SERVICE_NAME, Resource
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+from opentelemetry.sdk.resources import Resource
 from fastapi import FastAPI
 
-# Function to initialize OpenTelemetry tracing
-def init_otel_tracing(app: FastAPI):
-    # Set up trace provider and exporter
+def init_tracing(app: FastAPI):
+    """Initialize OpenTelemetry tracing for the application."""
+    service_name = "inventory-service"
+
+    # Set the tracer provider with a service name
     trace.set_tracer_provider(
-        TracerProvider(
-            resource=Resource.create({SERVICE_NAME: "inventory-service"})
-        )
+        TracerProvider(resource=Resource.create({"service.name": service_name}))
     )
     tracer_provider = trace.get_tracer_provider()
 
-    # Set up OTLP exporter (to send traces to a trace collector)
+    # Set up OTLP exporter
     otlp_exporter = OTLPSpanExporter(
         endpoint=os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317")
     )
@@ -27,8 +26,5 @@ def init_otel_tracing(app: FastAPI):
     span_processor = BatchSpanProcessor(otlp_exporter)
     tracer_provider.add_span_processor(span_processor)
 
-    # Enable FastAPI instrumentation
+    # Instrument FastAPI
     FastAPIInstrumentor.instrument_app(app)
-
-    # Enable MongoDB instrumentation
-    #MotorInstrumentor().instrument()
