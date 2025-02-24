@@ -1,19 +1,26 @@
-import motor.motor_asyncio
 import os
+from pymongo import MongoClient
+from opentelemetry.instrumentation.pymongo import PymongoInstrumentor
+from opentelemetry import trace
+from opentelemetry.trace import SpanKind
 from dotenv import load_dotenv
-
-load_dotenv()
+from opentelemetry.context import attach
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import ConsoleSpanExporter, SimpleSpanProcessor
 
 # Load environment variables
-MONGO_URI = os.getenv("MONGO_URI", "mongodb://mongo:27017/inventorydb")
+load_dotenv()
 
-# Create a MongoDB client
-client = motor.motor_asyncio.AsyncIOMotorClient(MONGO_URI)
-database = client.get_database()
+MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017/inventorydb")
 
-# Get the products collection
-products_collection = database.get_collection("products")
+# Initialize tracer
+trace.set_tracer_provider(TracerProvider())
+tracer = trace.get_tracer(__name__)
 
-# Dependency to access the database
-async def get_db():
-    return products_collection
+# Enable OpenTelemetry instrumentation for PyMongo BEFORE opening the connection
+#PymongoInstrumentor().instrument()
+
+# Initialize PyMongo
+client = MongoClient(MONGO_URI)
+db = client["inventorydb"]
+products_collection = db["products"]

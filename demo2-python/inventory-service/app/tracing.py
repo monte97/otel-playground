@@ -4,6 +4,7 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+from opentelemetry.instrumentation.pymongo import PymongoInstrumentor  # Add PyMongo instrumentation
 from opentelemetry.sdk.resources import Resource
 from fastapi import FastAPI
 
@@ -28,3 +29,6 @@ def init_tracing(app: FastAPI):
 
     # Instrument FastAPI
     FastAPIInstrumentor.instrument_app(app)
+
+    # Instrument PyMongo
+    #PymongoInstrumentor().instrument()  # Enables automatic tracing for MongoDB operations
