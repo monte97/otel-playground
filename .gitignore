@@ -1,0 +1,3 @@
+monitoring-dev/container/loki/wal
+monitoring-dev/container/grafana/data/
+monitoring-dev/container/loki/tsdb-shipper-active/uploader/name
