@@ -3,8 +3,7 @@ uvicorn
 motor
 psycopg2-binary
 sqlalchemy
-opentelemetry-api
-opentelemetry-sdk
+opentelemetry-distro
 opentelemetry-instrumentation-fastapi
 opentelemetry-instrumentation-pymongo
 opentelemetry-exporter-otlp

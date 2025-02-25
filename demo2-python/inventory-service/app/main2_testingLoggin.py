@@ -3,7 +3,7 @@ from . import crud, models
 from .tracing import init_tracing  # Import OpenTelemetry setup
 import time
 import logging
-import os
+
 
 # OpenTelemetry Tracing Imports
 from opentelemetry import trace
@@ -27,11 +27,12 @@ logger = logging.getLogger(__name__)
 # ===========================
 
 def init_otel_tracing(app):
+    """Initialize OpenTelemetry tracing for the application."""
     service_name = "inventory-service"
 
     # Set the tracer provider with a service name
     trace.set_tracer_provider(
-        TracerProvider(resource=Resource.create({"service.name": service_name}))
+        TracerProvider()
     )
     tracer_provider = trace.get_tracer_provider()
 
@@ -46,7 +47,6 @@ def init_otel_tracing(app):
 
     # Instrument FastAPI
     FastAPIInstrumentor.instrument_app(app)
-
 
 # ===========================
 # Initialize OpenTelemetry Logging
