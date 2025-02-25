@@ -39,6 +39,7 @@ services:
     environment:
       - MONGO_URI=mongodb://mongo:27017/inventorydb
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://192.168.0.138:4317
+      - OTEL_RESOURCE_ATTRIBUTES=service.name=inventory-service,service.namespace=inventory
     depends_on:
       - mongo
 
