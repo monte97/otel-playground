@@ -1,6 +1,6 @@
 import logging
 from sqlalchemy.orm import Session
-from models import Order
+from .models import Order
 from opentelemetry import trace
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
 

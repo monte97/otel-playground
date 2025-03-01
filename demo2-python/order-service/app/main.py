@@ -1,8 +1,8 @@
 from fastapi import FastAPI, Depends
 from sqlalchemy.orm import Session
-from database import SessionLocal, engine
-from models import Base
-from crud import create_order, get_orders
+from .database import SessionLocal, engine
+from .models import Base
+from .crud import create_order, get_orders
 import logging
 import os
 import time
