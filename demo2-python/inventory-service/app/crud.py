@@ -31,11 +31,14 @@ tracer = trace.get_tracer(__name__)
 meter = get_meter_provider().get_meter("custom-metrics", "1.0.0")
 
 # Get OpenTelemetry meter
-request_counter = meter.create_counter("crud_request_counter")
+request_counter = meter.create_counter(
+    "crud_request_counter",
+    description="Total number of request"
+    )
 
 # Define a counter for tracking searches
 search_counter = meter.create_counter(
-    "search_processed", 
+    "crud_search_counter", 
     description="Total number of searches processed",
 )
 
@@ -81,9 +84,11 @@ def get_product(product_id: str) -> dict:
         
         if product is None:
             #search_counter.add(1)
-            logger.error(f"Product {product_name} not found")
+            logger.error(f"Product {product_id} not found")
             raise HTTPException(status_code=404, detail="Product not found")
         
+        search_counter.add(1, {"product_name": product["name"]})
+        logger.info(f"increment search of {product["name"]}")
         return product_helper(product)
 
 def check_availability(product_name: str, quantity: int) -> dict:
@@ -96,6 +101,7 @@ def check_availability(product_name: str, quantity: int) -> dict:
         query = {"name": product_name}
         product = products_collection.find_one(query)
         if product is not None:
+            search_counter.add(1, {"product_name": product["name"]})
             return avaiability_helper(product, quantity)
         else:
             raise HTTPException(status_code=404, detail="Product not found")

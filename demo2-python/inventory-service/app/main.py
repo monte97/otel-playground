@@ -100,12 +100,6 @@ reader_metric = PeriodicExportingMetricReader(exporter_metric)
 provider_metric = MeterProvider(metric_readers=[reader_metric])
 set_meter_provider(provider_metric)
 
-# # Create a meter instance
-# meter = get_meter_provider().get_meter("custom-metrics", "1.0.0")
-
-# # Export meter for usage in other modules
-# __all__ = ["meter"]
-
 # ===========================
 # Initialize FastAPI Application
 # ===========================
