@@ -44,8 +44,8 @@ service:
     traces:
       receivers: [otlp]
       processors: [batch]
-      #exporters: [otlphttp/traces]
-      exporters: [otlp/traces,debug/traces]
+      exporters: [otlp/traces]
+      #exporters: [otlp/traces,debug/traces]
 
     metrics:
       receivers: [otlp, prometheus/collector]
