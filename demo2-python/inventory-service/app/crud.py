@@ -6,13 +6,42 @@ from fastapi import HTTPException
 from .database import products_collection  # Import the PyMongo collection
 from opentelemetry import trace
 from opentelemetry.trace import Tracer
+from opentelemetry.metrics import (
+    get_meter_provider,
+)
 
-# Setup logging
+# ==========================
+# Initialize logging
+# ==========================
+
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
+# ==========================
 # Initialize tracer
+# ==========================
+
 tracer = trace.get_tracer(__name__)
+
+
+# ==========================
+# Initialize Metrics
+# ==========================
+
+meter = get_meter_provider().get_meter("custom-metrics", "1.0.0")
+
+# Get OpenTelemetry meter
+request_counter = meter.create_counter("crud_request_counter")
+
+# Define a counter for tracking searches
+search_counter = meter.create_counter(
+    "search_processed", 
+    description="Total number of searches processed",
+)
+
+# ==========================
+# Helper functions
+# ==========================
 
 # Helper function to convert MongoDB _id to string
 def product_helper(product) -> dict:
@@ -28,9 +57,15 @@ def avaiability_helper(product, requested_quantity) -> dict:
         "available": product["quantity"] >= requested_quantity
     }
 
+
+# ==========================
+# API HANDLERS
+# ==========================
+
 # Get a single product by ID
 def get_product(product_id: str) -> dict:
     with tracer.start_as_current_span("get_product") as span:
+        request_counter.add(1)  # Increment counter on request
         query = {"_id": ObjectId(product_id)}
         span.set_attribute("db.query", str(query))
         start_time = time.time()
@@ -45,6 +80,7 @@ def get_product(product_id: str) -> dict:
         logger.info(f"Query executed in {elapsed_time:.4f} seconds with query: {query}")
         
         if product is None:
+            #search_counter.add(1)
             logger.error(f"Product {product_name} not found")
             raise HTTPException(status_code=404, detail="Product not found")
         
@@ -52,6 +88,7 @@ def get_product(product_id: str) -> dict:
 
 def check_availability(product_name: str, quantity: int) -> dict:
     with tracer.start_as_current_span("check_availability") as span:
+        request_counter.add(1)  # Increment counter on request
         span.set_attribute("db.query.product_name", product_name)
         span.set_attribute("db.query.quantity", quantity)
         logger.info(f"Check avaiability product with name: {product_name}")
@@ -65,6 +102,7 @@ def check_availability(product_name: str, quantity: int) -> dict:
 
 def reduce_quantity(product_name: str, quantity: int) -> dict:
     with tracer.start_as_current_span("reduce_quantity") as span:
+        request_counter.add(1)  # Increment counter on request
         span.set_attribute("db.query.product_name", product_name)
         span.set_attribute("db.query.quantity", quantity)
         # Ensure quantity to reduce is a positive integer
@@ -77,6 +115,8 @@ def reduce_quantity(product_name: str, quantity: int) -> dict:
 
         if product is None:
             raise HTTPException(status_code=404, detail="Product not found")
+
+        #search_counter.add(1)
 
         # Ensure the product has enough quantity to reduce
         if product["quantity"] < quantity:
@@ -96,6 +136,7 @@ def reduce_quantity(product_name: str, quantity: int) -> dict:
 # Get a list of all products
 def get_products(skip: int = 0, limit: int = 100) -> list:
     with tracer.start_as_current_span("get_products") as span:
+        request_counter.add(1)  # Increment counter on request
         query = {}
         span.set_attribute("db.query", str(query))
         start_time = time.time()
@@ -114,6 +155,7 @@ def get_products(skip: int = 0, limit: int = 100) -> list:
 # Create a new product
 def create_product(product: Product) -> dict:
     with tracer.start_as_current_span("create_product") as span:
+        request_counter.add(1)  # Increment counter on request
         product_dict = product.dict()
         span.set_attribute("db.query", "insert")
         start_time = time.time()
@@ -132,6 +174,7 @@ def create_product(product: Product) -> dict:
 # Update an existing product
 def update_product(product_id: str, product: Product) -> dict:
     with tracer.start_as_current_span("update_product") as span:
+        request_counter.add(1)  # Increment counter on request
         product_dict = product.dict(exclude_unset=True)
         query = {"_id": ObjectId(product_id)}
         span.set_attribute("db.query", str(query))
@@ -154,6 +197,7 @@ def update_product(product_id: str, product: Product) -> dict:
 # Delete a product
 def delete_product(product_id: str) -> dict:
     with tracer.start_as_current_span("delete_product") as span:
+        request_counter.add(1)  # Increment counter on request
         query = {"_id": ObjectId(product_id)}
         span.set_attribute("db.query", str(query))
         start_time = time.time()
@@ -174,6 +218,7 @@ def delete_product(product_id: str) -> dict:
 # Get the quantity of a product by ID
 def get_product_quantity(product_id: str) -> dict:
     with tracer.start_as_current_span("get_product_quantity") as span:
+        request_counter.add(1)  # Increment counter on request
         query = {"_id": ObjectId(product_id)}
         projection = {"quantity": 1}
         span.set_attribute("db.query", str(query))
@@ -189,5 +234,7 @@ def get_product_quantity(product_id: str) -> dict:
         
         if product is None:
             raise HTTPException(status_code=404, detail="Product not found")
+        #search_counter.add(1)
+
         
         return {"quantity": product["quantity"]}

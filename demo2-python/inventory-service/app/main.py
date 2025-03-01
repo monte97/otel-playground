@@ -20,12 +20,24 @@ from opentelemetry.exporter.otlp.proto.grpc._log_exporter import OTLPLogExporter
 from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
 from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
 
-logger = logging.getLogger(__name__)
+# OpenTelemetry Metrics Import
+
+from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import (
+    OTLPMetricExporter,
+)
+from opentelemetry.metrics import (
+    CallbackOptions,
+    Observation,
+    get_meter_provider,
+    set_meter_provider,
+)
+from opentelemetry.sdk.metrics import MeterProvider
+from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
+
 
 # ===========================
 # Initialize OpenTelemetry Tracing
 # ===========================
-
 def init_otel_tracing(app):
     service_name = "inventory-service"
 
@@ -51,6 +63,7 @@ def init_otel_tracing(app):
 # ===========================
 # Initialize OpenTelemetry Logging
 # ===========================
+logger = logging.getLogger(__name__)
 
 def init_otel_logging():
     """Set up OpenTelemetry Logging to export logs via OTLP."""
@@ -77,6 +90,21 @@ def init_otel_logging():
 
     print("Logging initialized with OTLP Exporter")
 
+
+# ===========================
+# Initialize Metrics
+# ===========================
+
+exporter_metric = OTLPMetricExporter(endpoint=os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317"), insecure=True)
+reader_metric = PeriodicExportingMetricReader(exporter_metric)
+provider_metric = MeterProvider(metric_readers=[reader_metric])
+set_meter_provider(provider_metric)
+
+# # Create a meter instance
+# meter = get_meter_provider().get_meter("custom-metrics", "1.0.0")
+
+# # Export meter for usage in other modules
+# __all__ = ["meter"]
 
 # ===========================
 # Initialize FastAPI Application
@@ -125,3 +153,8 @@ def delete_product(product_id: str):
 @app.get("/products/{product_id}/quantity")
 def get_product_quantity(product_id: str):
     return crud.get_product_quantity(product_id)
+
+@app.get("/metrics")
+def metrics():
+    # Expose OpenTelemetry metrics to Prometheus
+    return generate_latest(REGISTRY)

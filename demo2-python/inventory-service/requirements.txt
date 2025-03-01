@@ -2,7 +2,6 @@ fastapi
 uvicorn
 motor
 psycopg2-binary
-sqlalchemy
 opentelemetry-distro
 opentelemetry-instrumentation-fastapi
 opentelemetry-instrumentation-pymongo
