@@ -4,7 +4,7 @@ datasources:
   - name: Prometheus
     type: prometheus
     uid: prometheus
-    url: http://${PROMETHEUS_HOST}:{PROMETHEUS_PORT}
+    url: http://${PROMETHEUS_HOST}:${PROMETHEUS_PORT}
     jsonData:
       timeInterval: 60s
       exemplarTraceIdDestinations:
