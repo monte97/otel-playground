@@ -103,8 +103,8 @@ def check_availability(product_name: str, quantity: int = Query(..., description
     return crud.check_availability(product_name, quantity)
 
 @app.post("/products/{product_name}/reduce-quantity", response_model=models.ProductInResponse)
-def reduce_quantity(product_name: str, quantity: int):
-    return crud.reduce_quantity("", 1)
+def reduce_quantity(product_name: str, reduce_quantity_request: models.ReduceQuantityRequest):
+    return crud.reduce_quantity(product_name, reduce_quantity_request.quantity)
 
 # List all products
 @app.get("/products/", response_model=list[models.ProductInResponse])

@@ -17,3 +17,6 @@ class ProductInResponse(Product):
 
 class AvailableResponse(BaseModel):
     available: bool
+
+class ReduceQuantityRequest(BaseModel):
+    quantity: int

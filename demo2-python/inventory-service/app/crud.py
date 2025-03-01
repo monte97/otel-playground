@@ -23,6 +23,11 @@ def product_helper(product) -> dict:
         "quantity": product["quantity"]
     }
 
+def avaiability_helper(product, requested_quantity) -> dict:
+    return {
+        "available": product["quantity"] >= requested_quantity
+    }
+
 # Get a single product by ID
 def get_product(product_id: str) -> dict:
     with tracer.start_as_current_span("get_product") as span:
@@ -40,6 +45,7 @@ def get_product(product_id: str) -> dict:
         logger.info(f"Query executed in {elapsed_time:.4f} seconds with query: {query}")
         
         if product is None:
+            logger.error(f"Product {product_name} not found")
             raise HTTPException(status_code=404, detail="Product not found")
         
         return product_helper(product)
@@ -48,12 +54,44 @@ def check_availability(product_name: str, quantity: int) -> dict:
     with tracer.start_as_current_span("check_availability") as span:
         span.set_attribute("db.query.product_name", product_name)
         span.set_attribute("db.query.quantity", quantity)
-
         logger.info(f"Check avaiability product with name: {product_name}")
-    return {"available": True}
+        
+        query = {"name": product_name}
+        product = products_collection.find_one(query)
+        if product is not None:
+            return avaiability_helper(product, quantity)
+        else:
+            raise HTTPException(status_code=404, detail="Product not found")
 
 def reduce_quantity(product_name: str, quantity: int) -> dict:
-    return {}
+    with tracer.start_as_current_span("reduce_quantity") as span:
+        span.set_attribute("db.query.product_name", product_name)
+        span.set_attribute("db.query.quantity", quantity)
+        # Ensure quantity to reduce is a positive integer
+        if quantity <= 0:
+            raise HTTPException(status_code=400, detail="Quantity must be a positive integer")
+
+        # Find the product by name
+        product = products_collection.find_one({"name": product_name})
+        logger.info(f"product found {product}")
+
+        if product is None:
+            raise HTTPException(status_code=404, detail="Product not found")
+
+        # Ensure the product has enough quantity to reduce
+        if product["quantity"] < quantity:
+            raise HTTPException(status_code=400, detail="Not enough stock to reduce")
+
+        # Reduce the quantity by the given amount
+        updated_product = products_collection.find_one_and_update(
+            {"name": product_name},  # Find the product by name
+            {"$inc": {"quantity": -quantity}},  # Reduce the quantity by the specified amount
+            return_document=True  # Return the updated document
+        )
+        logger.info(f"product update {updated_product}")
+
+        return product_helper(updated_product)
+
 
 # Get a list of all products
 def get_products(skip: int = 0, limit: int = 100) -> list:
