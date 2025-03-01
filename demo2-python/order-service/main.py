@@ -27,8 +27,9 @@ logger = logging.getLogger(__name__)
 # Initialize OpenTelemetry Tracing
 # ===========================
 
+service_name = "order-service"
+
 def init_otel_tracing(app):
-    service_name = "order-service"
 
     # Set the tracer provider with a service name
     trace.set_tracer_provider(
@@ -59,7 +60,7 @@ def init_otel_logging():
     # Define service name in logs
     logger_provider = LoggerProvider(
         resource=Resource.create({
-            "service.name": "inventory-service",
+            "service.name": service_name,
         })
     )
 
