@@ -14,3 +14,6 @@ class Product(BaseModel):
 # Product response model (with ID field)
 class ProductInResponse(Product):
     id: str
+
+class AvailableResponse(BaseModel):
+    available: bool

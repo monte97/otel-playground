@@ -44,6 +44,17 @@ def get_product(product_id: str) -> dict:
         
         return product_helper(product)
 
+def check_availability(product_name: str, quantity: int) -> dict:
+    with tracer.start_as_current_span("check_availability") as span:
+        span.set_attribute("db.query.product_name", product_name)
+        span.set_attribute("db.query.quantity", quantity)
+
+        logger.info(f"Check avaiability product with name: {product_name}")
+    return {"available": True}
+
+def reduce_quantity(product_name: str, quantity: int) -> dict:
+    return {}
+
 # Get a list of all products
 def get_products(skip: int = 0, limit: int = 100) -> list:
     with tracer.start_as_current_span("get_products") as span:
