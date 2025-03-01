@@ -6,3 +6,5 @@ opentelemetry-sdk
 opentelemetry-instrumentation-fastapi
 opentelemetry-instrumentation-sqlalchemy
 python-dotenv
+opentelemetry-distro
+opentelemetry-exporter-otlp
