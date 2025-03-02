@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+psycopg2-binary
+sqlalchemy
+opentelemetry-sdk
+opentelemetry-instrumentation-fastapi
+opentelemetry-instrumentation-sqlalchemy
+python-dotenv
+opentelemetry-distro
+opentelemetry-exporter-otlp

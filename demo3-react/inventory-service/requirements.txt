@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+motor
+psycopg2-binary
+opentelemetry-distro
+opentelemetry-instrumentation-fastapi
+opentelemetry-instrumentation-pymongo
+opentelemetry-exporter-otlp
+python-dotenv
