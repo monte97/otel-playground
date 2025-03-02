@@ -1,35 +1,44 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import React, { useState } from 'react';
+import './App.css';
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [result, setResult] = useState('');
+
+  const handleApiCall = async (apiNumber) => {
+    try {
+      let response;
+      if (apiNumber === 1) {
+        response = await fetch('http://localhost:8002/products/?skip=0&limit=100');
+      } else {
+        response = await fetch('http://localhost:8001/orders/');
+      }
+      const data = await response.json();
+      setResult(JSON.stringify(data, null, 2)); // Pretty print JSON result
+    } catch (error) {
+      setResult(`Error: ${error.message}`);
+    }
+  };
 
   return (
-    <>
+    <div className="App">
+      <h1>API Buttons Example</h1>
+
       <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+        <button onClick={() => handleApiCall(1)}>Call API products</button>
+        <button onClick={() => handleApiCall(2)}>Call API orders</button>
       </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
+
+      <div>
+        <textarea
+          value={result}
+          readOnly
+          placeholder="API result will appear here..."
+          rows={10}
+          cols={50}
+        />
       </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    </div>
+  );
 }
 
-export default App
+export default App;
