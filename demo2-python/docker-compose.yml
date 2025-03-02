@@ -17,7 +17,7 @@ services:
       - "8001:8001"
     environment:
       - DATABASE_URL=postgresql://postgres:password@db:5432/orderdb
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://192.168.0.138:4317
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://${OTEL_HOST}:${OTEL_COLLECTOR_PORT_GRPC}
       - INVENTORY_SERVICE_URL=http://inventory-service:8000  # Inventory service URL
     depends_on:
       - db
@@ -39,7 +39,7 @@ services:
       - "8002:8000"
     environment:
       - MONGO_URI=mongodb://mongo:27017/inventorydb
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://192.168.0.138:4317
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://${OTEL_HOST}:${OTEL_COLLECTOR_PORT_GRPC}
       - OTEL_RESOURCE_ATTRIBUTES=service.name=inventory-service,service.namespace=inventory
       - ORDER_SERVICE_URL=http://order-service:8001  # Order service URL
     depends_on:
