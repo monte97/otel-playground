@@ -4,6 +4,7 @@ from .tracing import init_tracing  # Import OpenTelemetry setup
 import time
 import logging
 import os
+from fastapi.middleware.cors import CORSMiddleware
 
 # OpenTelemetry Tracing Imports
 from opentelemetry import trace
@@ -105,6 +106,15 @@ set_meter_provider(provider_metric)
 # ===========================
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allow all origins
+    allow_credentials=True,
+    allow_methods=["*"],  # Allow all methods (GET, POST, etc.)
+    allow_headers=["*"],  # Allow all headers
+)
+
 
 # Initialize OpenTelemetry Tracing and Logging
 init_otel_tracing(app)

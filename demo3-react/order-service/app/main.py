@@ -6,6 +6,7 @@ from .crud import create_order, get_orders
 import logging
 import os
 import time
+from fastapi.middleware.cors import CORSMiddleware
 
 # OpenTelemetry Tracing Imports
 from opentelemetry import trace
@@ -85,6 +86,15 @@ def init_otel_logging():
 # ===========================
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allow all origins
+    allow_credentials=True,
+    allow_methods=["*"],  # Allow all methods (GET, POST, etc.)
+    allow_headers=["*"],  # Allow all headers
+)
+
 
 # Initialize OpenTelemetry Tracing and Logging
 init_otel_tracing(app)
