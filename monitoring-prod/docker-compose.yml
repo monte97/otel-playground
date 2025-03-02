@@ -56,13 +56,11 @@ services:
     container_name: lgtm_tempo
     user: root
     ports:
-      - 3200:3200
+      - ${TEMPO_PORT_HTTP}:3200
       - 14317:4317
     volumes:
-      #- ./configs/tempo/tempo-config.yaml.template:/etc/tempo/tempo-config.yaml.template  # Mount template file
       - ./configs/tempo/tempo-config.yaml:/etc/tempo/tempo-config.yaml  # Mount template file
       - tempo_data:/data  # Persistent data volume
-      # - ./configs/tempo/entrypoint.sh:/etc/tempo/entrypoint.sh  # Mount entrypoint script
     command: -config.file=/etc/tempo/tempo-config.yaml  # This will use the processed config file
     depends_on:
       - otel-collector
@@ -96,16 +94,16 @@ services:
     image: ${GRAFANA_IMAGE}
     container_name: lgtm_grafana
     ports:
-      - "3000:3000"
+      - "${GRAFANA_PORT}:3000"
     environment:
-      - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=admin
-      - PROMETHEUS_HOST=prometheus
-      - PROMETHEUS_PORT=9090
-      - TEMPO_HOST=lgtm_tempo
-      - TEMPO_PORT=3200
-      - LOKI_HOST=loki
-      - LOKI_PORT=3100
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
+      - PROMETHEUS_HOST=${PROMETHEUS_HOST}
+      - PROMETHEUS_PORT=${PROMETHEUS_PORT}
+      - TEMPO_HOST=${TEMPO_HOST}
+      - TEMPO_PORT=${TEMPO_PORT_HTTP}
+      - LOKI_HOST=${LOKI_HOST}
+      - LOKI_PORT=${LOKI_PORT}
     volumes:
       - grafana_data:/var/lib/grafana
       - ./configs/grafana/provisioning/entrypoint.sh:/etc/grafana/provisioning/entrypoint.sh
