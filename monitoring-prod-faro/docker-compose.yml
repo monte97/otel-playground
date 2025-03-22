@@ -1,0 +1,132 @@
+version: '3.8'
+
+services:
+  
+  otel-collector:
+    image: ${COLLECTOR_CONTRIB_IMAGE}
+    container_name: otel-collector
+    deploy:
+      resources:
+        limits:
+          memory: 200M
+    restart: unless-stopped
+    command: [ "--config=/etc/otelcol-config.yml", "--config=/etc/otelcol-config-extras.yml" ]
+    user: 0:0
+    volumes:
+      - ${HOST_FILESYSTEM}:/hostfs:ro
+      - ${DOCKER_SOCK}:/var/run/docker.sock:ro
+      - ${OTEL_COLLECTOR_CONFIG}:/etc/otelcol-config.yml
+      - ${OTEL_COLLECTOR_CONFIG_EXTRAS}:/etc/otelcol-config-extras.yml
+    ports:
+      - "${OTEL_COLLECTOR_PORT_GRPC}:4317"
+      - "${OTEL_COLLECTOR_PORT_HTTP}:4318"
+      - "${OTEL_COLLECTOR_PORT_FARO}:4319"
+    environment:
+      - OTEL_COLLECTOR_HOST=${OTEL_COLLECTOR_HOST}
+      - OTEL_COLLECTOR_PORT_GRPC=${OTEL_COLLECTOR_PORT_GRPC}
+      - OTEL_COLLECTOR_PORT_HTTP=${OTEL_COLLECTOR_PORT_HTTP}
+      - OTEL_COLLECTOR_PORT_FARO=${OTEL_COLLECTOR_PORT_FARO}
+      - PROMETHEUS_HOST=${PROMETHEUS_HOST}
+      - PROMETHEUS_PORT=${PROMETHEUS_PORT}
+      - TEMPO_HOST=${TEMPO_HOST}
+      - TEMPO_PORT_HTTP=${TEMPO_PORT_HTTP}
+      - TEMPO_PORT_OLTP=${TEMPO_PORT_OLTP}
+      - LOKI_HOST=${LOKI_HOST}
+      - LOKI_PORT=${LOKI_PORT}
+    networks:
+      - monitoring
+
+  loki:
+    image: ${LOKI_IMAGE}
+    container_name: lgtm_loki
+    user: root
+    environment:
+      - ALERTMANAGER_HOST=${ALERTMANAGER_HOST}
+      - ALERTMANAGER_PORT=${ALERTMANAGER_PORT}
+    depends_on:
+      - otel-collector
+    entrypoint: /etc/loki/entrypoint.sh  # Ensure this is the correct path to entrypoint.sh
+    volumes:
+      - ./configs/loki/entrypoint.sh:/etc/loki/entrypoint.sh
+      - ./configs/loki/loki-config.yaml.template:/etc/loki/loki-config.yaml.template
+      - loki_data:/data:rw
+    networks:
+      - monitoring
+
+  tempo:
+    image: ${TEMPO_IMAGE}
+    container_name: lgtm_tempo
+    user: root
+    ports:
+      - ${TEMPO_PORT_HTTP}:3200
+      - 14317:4317
+    volumes:
+      - ./configs/tempo/tempo-config.yaml:/etc/tempo/tempo-config.yaml  # Mount template file
+      - tempo_data:/data  # Persistent data volume
+    command: -config.file=/etc/tempo/tempo-config.yaml  # This will use the processed config file
+    depends_on:
+      - otel-collector
+    restart: unless-stopped
+    networks:
+      - monitoring
+      
+  prometheus:
+    image: ${PROMETHEUS_IMAGE}
+    container_name: prometheus
+    user: root
+    volumes:
+      - ./configs/prometheus/prometheus.yaml:/etc/prometheus/prometheus.yaml  # Prometheus configuration file
+      - prometheus_data:/data/prometheus  # Persistent storage for Prometheus data
+    command: >
+      --web.enable-remote-write-receiver
+      --web.enable-otlp-receiver
+      --enable-feature=exemplar-storage
+      --enable-feature=native-histograms
+      --storage.tsdb.path=/data/prometheus
+      --config.file=/etc/prometheus/prometheus.yaml
+    environment:
+      - ENABLE_LOGS_PROMETHEUS=${ENABLE_LOGS_PROMETHEUS:-false}  # Optional: Enable logging through environment variable
+    restart: unless-stopped  # Ensures Prometheus restarts unless stopped manually
+    depends_on:
+      - otel-collector
+    networks:
+      - monitoring
+
+  grafana:
+    image: ${GRAFANA_IMAGE}
+    container_name: lgtm_grafana
+    ports:
+      - "${GRAFANA_PORT}:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
+      - PROMETHEUS_HOST=${PROMETHEUS_HOST}
+      - PROMETHEUS_PORT=${PROMETHEUS_PORT}
+      - TEMPO_HOST=${TEMPO_HOST}
+      - TEMPO_PORT=${TEMPO_PORT_HTTP}
+      - LOKI_HOST=${LOKI_HOST}
+      - LOKI_PORT=${LOKI_PORT}
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./configs/grafana/provisioning/entrypoint.sh:/etc/grafana/provisioning/entrypoint.sh
+      - ./configs/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+      - ./configs/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+      - ./configs/grafana/dashboards:/var/lib/grafana/dashboards
+    entrypoint: /etc/grafana/provisioning/entrypoint.sh
+    networks:
+      - monitoring
+    depends_on:
+      - loki
+      - tempo
+      - prometheus
+      - otel-collector
+
+volumes:
+  grafana_data:
+  loki_data:
+  tempo_data:
+  prometheus_data:
+
+networks:
+  monitoring:
+    driver: bridge
