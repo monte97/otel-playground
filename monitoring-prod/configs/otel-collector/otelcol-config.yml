@@ -15,13 +15,13 @@ receivers:
         - job_name: "opentelemetry-collector"
           static_configs:
             - targets: ["localhost:8888"]
-
+            
 processors:
   batch:
 
 exporters:
   otlphttp/metrics:
-    endpoint: http://${env:PROMETHEUS_HOST}:${env:PROMETHEUS_PORT}/api/v1/otlp
+    endpoint: http://${env:PROMETHEUS_HOST}:${env:PROMETHEUS_PORT}/v1/traces
     tls:
       insecure: true
   otlp/traces:             # Add this exporter for gRPC traces
@@ -46,7 +46,6 @@ service:
       processors: [batch]
       exporters: [otlp/traces]
       #exporters: [otlp/traces,debug/traces]
-
     metrics:
       receivers: [otlp, prometheus/collector]
       processors: [batch]
