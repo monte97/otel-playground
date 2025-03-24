@@ -39,3 +39,7 @@ When an order is created, the system checks the availability of the specified pr
 - Both services provide a Swagger interface at the `/docs` route to test the available APIs.
 
 For a detailed explanation of this demo, refer to **Chapter XYZ**.
+
+# Demo 4 - autoinst
+
+Like `demo2` but wit full autoinstrumentation, no changes on the code
