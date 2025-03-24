@@ -54,5 +54,5 @@ service:
     logs:
       receivers: [otlp]
       processors: [batch]
-      exporters: [otlphttp/logs]
-      #exporters: [otlphttp/logs,debug/logs]
+      #exporters: [otlphttp/logs]
+      exporters: [otlphttp/logs,debug/logs]
