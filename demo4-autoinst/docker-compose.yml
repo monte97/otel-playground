@@ -20,6 +20,10 @@ services:
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://${OTEL_HOST}:${OTEL_COLLECTOR_PORT_GRPC}
       - INVENTORY_SERVICE_URL=http://inventory-service:8000 
       - OTEL_RESOURCE_ATTRIBUTES=service.name=order-service,service.namespace=demo4
+      - OTEL_PYTHON_LOG_CORRELATION=true
+      - OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED=true
+      - OTEL_PYTHON_LOG_LEVEL=debug
+      - OTEL_EXPORTER_OTLP_INSECURE=true
     depends_on:
       - db
 

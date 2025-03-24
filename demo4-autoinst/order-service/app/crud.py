@@ -5,7 +5,6 @@ from sqlalchemy.orm import Session
 from .models import Order
 
 # Initialize logger
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Get Inventory Service URL from environment
