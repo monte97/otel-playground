@@ -6,9 +6,7 @@ from fastapi import HTTPException
 from .database import products_collection  # Import the PyMongo collection
 
 
-logging.basicConfig(level=logging.NOTSET)
 logger = logging.getLogger(__name__)
-
 
 # ==========================
 # Helper functions
@@ -91,12 +89,14 @@ def reduce_quantity(product_name: str, quantity: int) -> dict:
 # Get a list of all products
 def get_products(skip: int = 0, limit: int = 100) -> list:
     query = {}
+    logger.debug("Hola debug")
     logger.info(f"Querying all products with skip={skip} and limit={limit}")
     start_time = time.time()
     
     products = products_collection.find(query).skip(skip).limit(limit)
     elapsed_time = time.time() - start_time
     logger.warn(f"Query executed in {elapsed_time:.4f} seconds with query: {query}")
+    logger.error("try out errors too")
     
     return [product_helper(product) for product in products]
 

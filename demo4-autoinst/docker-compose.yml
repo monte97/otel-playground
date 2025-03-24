@@ -45,6 +45,7 @@ services:
       - ORDER_SERVICE_URL=http://order-service:8001  # Order service URL
       - OTEL_PYTHON_LOG_CORRELATION=true
       - OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED=true
+      - OTEL_PYTHON_LOG_LEVEL=debug
       - OTEL_EXPORTER_OTLP_INSECURE=true
     depends_on:
       - mongo
