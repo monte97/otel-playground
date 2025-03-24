@@ -63,6 +63,15 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8003:8000"
+    environment:
+      - ASPNETCORE_URLS=http://+:8000
+      - OTEL_DOTNET_AUTO_INSTRUMENTATION_ENABLED=true
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://${OTEL_HOST}:${OTEL_COLLECTOR_PORT_GRPC}
+      - OTEL_RESOURCE_ATTRIBUTES=service.name=invoice-service,service.namespace=demo4
+      - OTEL_TRACES_EXPORTER=console
+      - OTEL_METRICS_EXPORTER=console
+      - OTEL_LOGS_EXPORTER=console
+
 
 volumes:
   postgres_data:
