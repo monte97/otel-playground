@@ -43,6 +43,9 @@ services:
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://${OTEL_HOST}:${OTEL_COLLECTOR_PORT_GRPC}
       - OTEL_RESOURCE_ATTRIBUTES=service.name=inventory-service,service.namespace=demo4
       - ORDER_SERVICE_URL=http://order-service:8001  # Order service URL
+      - OTEL_PYTHON_LOG_CORRELATION=true
+      - OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED=true
+      - OTEL_EXPORTER_OTLP_INSECURE=true
     depends_on:
       - mongo
 

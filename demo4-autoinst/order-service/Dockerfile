@@ -15,6 +15,10 @@ COPY . .
 
 EXPOSE 8001
 
+RUN export OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED=true
+RUN export OTEL_LOG_LEVEL=debug
+RUN export OTEL_PYTHON_LOG_LEVEL=debug
+
 CMD ["sh", "-c", "opentelemetry-instrument \
     --traces_exporter console,otlp \
     --logs_exporter console,otlp \
