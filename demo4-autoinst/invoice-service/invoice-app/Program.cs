@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using OpenTelemetry;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
@@ -6,65 +8,100 @@ using OpenTelemetry.Trace;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+// Configure database
+builder.Services.AddDbContext<InvoiceDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// Add Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+// OpenTelemetry Configuration
 builder.Services.AddOpenTelemetry()
     .ConfigureResource(resource => resource.AddService("Invoice-Service"))
     .WithMetrics(metrics =>
     {
-        metrics
-            .AddAspNetCoreInstrumentation()
-            .AddHttpClientInstrumentation();
-
-        metrics.AddOtlpExporter();
+        metrics.AddAspNetCoreInstrumentation()
+               .AddHttpClientInstrumentation()
+               .AddOtlpExporter();
     })
     .WithTracing(tracing =>
     {
-        tracing
-            .AddAspNetCoreInstrumentation()
-            .AddHttpClientInstrumentation()
-            .AddEntityFrameworkCoreInstrumentation();
-
-        tracing.AddOtlpExporter();
+        tracing.AddAspNetCoreInstrumentation()
+               .AddHttpClientInstrumentation()
+               .AddEntityFrameworkCoreInstrumentation()
+               .AddOtlpExporter();
     });
 
-builder.Logging.AddOpenTelemetry(loggin => loggin.AddOtlpExporter());
+builder.Logging.AddOpenTelemetry(logging => logging.AddOtlpExporter());
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
- 
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
+app.UseSwagger();
+app.UseSwaggerUI();
 
-app.MapGet("/weatherforecast", () =>
+// Apply migrations at startup
+using (var scope = app.Services.CreateScope())
 {
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast")
-.WithOpenApi();
+    var dbContext = scope.ServiceProvider.GetRequiredService<InvoiceDbContext>();
+    dbContext.Database.Migrate();
+}
+
+// API Endpoints
+app.MapPost("/invoices", async ([FromBody] Invoice invoice, InvoiceDbContext db) =>
+{
+    invoice.Id = Guid.NewGuid();
+    db.Invoices.Add(invoice);
+    await db.SaveChangesAsync();
+    return Results.Created($"/invoices/{invoice.Id}", invoice);
+});
+
+app.MapGet("/invoices", async (InvoiceDbContext db) => Results.Ok(await db.Invoices.ToListAsync()));
+
+app.MapGet("/invoices/{id}", async (Guid id, InvoiceDbContext db) =>
+{
+    var invoice = await db.Invoices.FindAsync(id);
+    return invoice is not null ? Results.Ok(invoice) : Results.NotFound();
+});
+
+app.MapPut("/invoices/{id}", async (Guid id, [FromBody] Invoice updatedInvoice, InvoiceDbContext db) =>
+{
+    var invoice = await db.Invoices.FindAsync(id);
+    if (invoice is null) return Results.NotFound();
+    
+    invoice.CustomerName = updatedInvoice.CustomerName;
+    invoice.Amount = updatedInvoice.Amount;
+    invoice.DueDate = updatedInvoice.DueDate;
+    await db.SaveChangesAsync();
+    return Results.Ok(invoice);
+});
+
+app.MapDelete("/invoices/{id}", async (Guid id, InvoiceDbContext db) =>
+{
+    var invoice = await db.Invoices.FindAsync(id);
+    if (invoice is null) return Results.NotFound();
+    
+    db.Invoices.Remove(invoice);
+    await db.SaveChangesAsync();
+    return Results.NoContent();
+});
+
+app.MapGet("/ping", () => Results.Ok("pong"));
 
 app.Run();
 
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
+// Database context
+class InvoiceDbContext : DbContext
 {
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
+    public InvoiceDbContext(DbContextOptions<InvoiceDbContext> options) : base(options) { }
+    public DbSet<Invoice> Invoices { get; set; }
+}
+
+// Invoice model
+class Invoice
+{
+    public Guid Id { get; set; }
+    public string CustomerName { get; set; } = string.Empty;
+    public decimal Amount { get; set; }
+    public DateTime DueDate { get; set; }
 }

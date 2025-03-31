@@ -68,7 +68,23 @@ services:
       - OTEL_RESOURCE_ATTRIBUTES=service.name=invoice-service,service.namespace=demo4
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://${OTEL_HOST}:${OTEL_COLLECTOR_PORT_GRPC}
       - OTEL_EXPORTER_OTLP_INSECURE=true
+      - ConnectionStrings__DefaultConnection=Host=invoice-db;Database=invoices;Username=postgres;Password=postgres
+    depends_on:
+      - invoice-db
+
+  invoice-db:
+    image: postgres:latest
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=invoices
+    volumes:
+      - invoice_data:/var/lib/postgresql/data
+      - ./invoice-service/init.sql:/docker-entrypoint-initdb.d/init.sql  # Aggiungi questa linea per caricare lo script
 
 volumes:
   postgres_data:
   mongo_data:
+  invoice_data:
+
