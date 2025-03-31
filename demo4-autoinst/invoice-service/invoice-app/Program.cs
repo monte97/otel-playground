@@ -30,6 +30,7 @@ builder.Services.AddOpenTelemetry()
         tracing.AddAspNetCoreInstrumentation()
                .AddHttpClientInstrumentation()
                .AddEntityFrameworkCoreInstrumentation()
+               .AddSource("Npgsql") // Traccia anche le query PostgreSQL
                .AddOtlpExporter();
     });
 
@@ -48,11 +49,15 @@ using (var scope = app.Services.CreateScope())
 }
 
 // API Endpoints
-app.MapPost("/invoices", async ([FromBody] Invoice invoice, InvoiceDbContext db) =>
+app.MapPost("/invoices", async ([FromBody] Invoice invoice, InvoiceDbContext db, ILogger<Program> logger) =>
 {
     invoice.Id = Guid.NewGuid();
+    logger.LogInformation("Creating a new invoice for {CustomerName}, Amount: {Amount}", invoice.CustomerName, invoice.Amount);
+    
     db.Invoices.Add(invoice);
     await db.SaveChangesAsync();
+    
+    logger.LogInformation("Invoice {InvoiceId} created successfully", invoice.Id);
     return Results.Created($"/invoices/{invoice.Id}", invoice);
 });
 
