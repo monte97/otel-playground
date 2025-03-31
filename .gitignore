@@ -32,3 +32,50 @@ monitoring-dev/container/*
 # Ignore OS-specific files
 **/.DS_Store
 **/Thumbs.db
+
+# ===== .NET-specific ignores =====
+
+# Ignore .NET build artifacts
+**/bin/
+**/obj/
+
+# Ignore user-specific settings
+**/*.user
+**/*.suo
+**/*.vscode/
+
+# Ignore Visual Studio Code workspace settings
+**/.vscode/
+
+# Ignore Rider/JetBrains settings
+**/.idea/
+**/*.sln.iml
+
+# Ignore .NET publish output
+**/out/
+**/publish/
+
+# Ignore .NET environment settings
+**/appsettings.Development.json
+**/appsettings.Local.json
+**/appsettings.*.json
+
+# Ignore temporary ASP.NET Core hosting files
+**/.vs/
+**/.aspnet/
+**/.azure/
+
+# Ignore NuGet package directories
+**/packages/
+**/project.lock.json
+**/global.json
+**/.nuget/
+
+# Ignore Entity Framework migrations snapshot files
+**/Migrations/*.Designer.cs
+**/Migrations/*.resx
+
+# Ignore local tools
+**/.dotnet-tools/
+**/.store/
+**/.config/dotnet-tools.json
