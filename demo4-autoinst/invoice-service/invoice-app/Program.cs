@@ -76,7 +76,6 @@ app.MapPut("/invoices/{id}", async (Guid id, [FromBody] Invoice updatedInvoice, 
     
     invoice.CustomerName = updatedInvoice.CustomerName;
     invoice.Amount = updatedInvoice.Amount;
-    invoice.DueDate = updatedInvoice.DueDate;
     await db.SaveChangesAsync();
     return Results.Ok(invoice);
 });
@@ -108,5 +107,4 @@ class Invoice
     public Guid Id { get; set; }
     public string CustomerName { get; set; } = string.Empty;
     public decimal Amount { get; set; }
-    public DateTime DueDate { get; set; }
 }

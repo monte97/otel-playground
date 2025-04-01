@@ -10,6 +10,7 @@ services:
     depends_on:
       - order-service
       - inventory-service
+    restart: unless-stopped
 
   order-service:
     build: ./order-service
@@ -18,7 +19,8 @@ services:
     environment:
       - DATABASE_URL=postgresql://postgres:password@db:5432/orderdb
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://${OTEL_HOST}:${OTEL_COLLECTOR_PORT_GRPC}
-      - INVENTORY_SERVICE_URL=http://inventory-service:8000 
+      - INVENTORY_SERVICE_URL=http://inventory-service:8000
+      - INVOICE_SERVICE_URL=http://invoice-service:8000 
       - OTEL_RESOURCE_ATTRIBUTES=service.name=order-service,service.namespace=demo4
       - OTEL_PYTHON_LOG_CORRELATION=true
       - OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED=true
@@ -26,6 +28,7 @@ services:
       - OTEL_EXPORTER_OTLP_INSECURE=true
     depends_on:
       - db
+    restart: unless-stopped
 
   db:
     image: postgres:latest
@@ -35,6 +38,7 @@ services:
       POSTGRES_DB: orderdb
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
 
   inventory-service:
     build: ./inventory-service
@@ -44,18 +48,20 @@ services:
       - MONGO_URI=mongodb://mongo:27017/inventorydb
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://${OTEL_HOST}:${OTEL_COLLECTOR_PORT_GRPC}
       - OTEL_RESOURCE_ATTRIBUTES=service.name=inventory-service,service.namespace=demo4
-      - ORDER_SERVICE_URL=http://order-service:8001  # Order service URL
+      - ORDER_SERVICE_URL=http://order-service:8001
       - OTEL_PYTHON_LOG_CORRELATION=true
       - OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED=true
       - OTEL_PYTHON_LOG_LEVEL=debug
       - OTEL_EXPORTER_OTLP_INSECURE=true
     depends_on:
       - mongo
+    restart: unless-stopped
 
   mongo:
     image: mongo:latest
     volumes:
       - mongo_data:/data/db
+    restart: unless-stopped
 
   invoice-service:
     build:
@@ -71,6 +77,7 @@ services:
       - ConnectionStrings__DefaultConnection=Host=invoice-db;Database=invoices;Username=postgres;Password=postgres
     depends_on:
       - invoice-db
+    restart: unless-stopped
 
   invoice-db:
     image: postgres:latest
@@ -81,10 +88,9 @@ services:
       - POSTGRES_DB=invoices
     volumes:
       - invoice_data:/var/lib/postgresql/data
-      - ./invoice-service/init.sql:/docker-entrypoint-initdb.d/init.sql  # Aggiungi questa linea per caricare lo script
+      - ./invoice-service/init.sql:/docker-entrypoint-initdb.d/init.sql
 
 volumes:
   postgres_data:
   mongo_data:
   invoice_data:
-
