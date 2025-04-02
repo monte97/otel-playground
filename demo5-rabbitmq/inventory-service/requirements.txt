@@ -1,0 +1,5 @@
+fastapi
+uvicorn
+motor
+psycopg2-binary
+python-dotenv
