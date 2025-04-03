@@ -21,7 +21,7 @@ services:
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://${OTEL_HOST}:${OTEL_COLLECTOR_PORT_GRPC}
       - INVENTORY_SERVICE_URL=http://inventory-service:8000
       - INVOICE_SERVICE_URL=http://invoice-service:8000 
-      - OTEL_RESOURCE_ATTRIBUTES=service.name=order-service,service.namespace=demo4
+      - OTEL_RESOURCE_ATTRIBUTES=service.name=order-service,service.namespace=demo5
       - OTEL_PYTHON_LOG_CORRELATION=true
       - OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED=true
       - OTEL_PYTHON_LOG_LEVEL=debug
@@ -47,7 +47,7 @@ services:
     environment:
       - MONGO_URI=mongodb://mongo:27017/inventorydb
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://${OTEL_HOST}:${OTEL_COLLECTOR_PORT_GRPC}
-      - OTEL_RESOURCE_ATTRIBUTES=service.name=inventory-service,service.namespace=demo4
+      - OTEL_RESOURCE_ATTRIBUTES=service.name=inventory-service,service.namespace=demo5
       - ORDER_SERVICE_URL=http://order-service:8001
       - OTEL_PYTHON_LOG_CORRELATION=true
       - OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED=true
@@ -71,7 +71,7 @@ services:
       - "8003:8000"
     environment:
       - ASPNETCORE_URLS=http://+:8000
-      - OTEL_RESOURCE_ATTRIBUTES=service.name=invoice-service,service.namespace=demo4
+      - OTEL_RESOURCE_ATTRIBUTES=service.name=invoice-service,service.namespace=demo5
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://${OTEL_HOST}:${OTEL_COLLECTOR_PORT_GRPC}
       - OTEL_EXPORTER_OTLP_INSECURE=true
       - ConnectionStrings__DefaultConnection=Host=invoice-db;Database=invoices;Username=postgres;Password=postgres
@@ -104,16 +104,28 @@ services:
     build:
       context: ./stock-service
       dockerfile: Dockerfile
+    privileged: true  # Grants all necessary capabilities (recommended)
     ports:
-      - "8004:9000"  # Eventuale esposizione di una porta per monitoraggio/healthcheck
+      - "8004:8080"  # Eventuale esposizione di una porta per monitoraggio/healthcheck
     environment:
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://${OTEL_HOST}:${OTEL_COLLECTOR_PORT_GRPC}
-      - OTEL_RESOURCE_ATTRIBUTES=service.name=go-consumer,service.namespace=demo4
+      - OTEL_RESOURCE_ATTRIBUTES=service.name=stock-service,service.namespace=demo5
       - OTEL_EXPORTER_OTLP_INSECURE=true
       - RABBITMQ_URL=amqp://rabbitmq:5672  # URL di connessione a RabbitMQ
+      - BEYLA_EXECUTABLE_NAME=main
+      - BEYLA_TRACE_PRINTER=text
     depends_on:
       - rabbitmq
     restart: unless-stopped
+  
+  # autoinstrumenter:
+  #   image: grafana/beyla:latest
+  #   pid: "service:service-stock"
+  #   privileged: true
+  #   environment:
+  #     BEYLA_TRACE_PRINTER: text
+  #     BEYLA_OPEN_PORT: 8443
+  
 
 volumes:
   postgres_data:

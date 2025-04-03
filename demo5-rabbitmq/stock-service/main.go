@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"log"
+	"net/http"
 	"os"
 	"time"
 
@@ -9,6 +11,9 @@ import (
 )
 
 func main() {
+	// Start HTTP server with /ping endpoint in a separate goroutine
+	go startHTTPServer()
+
 	rabbitmqURL := getEnv("RABBITMQ_URL", "amqp://localhost:5672")
 	rabbitmqExchange := getEnv("RABBITMQ_EXCHANGE", "test_topic")
 	rabbitmqQueue := getEnv("RABBITMQ_QUEUE", "test_queue")
@@ -81,12 +86,22 @@ func main() {
 
 	fmt.Println("[*] Waiting for messages. To exit, press CTRL+C")
 
+	// Process messages in a loop
 	for msg := range msgs {
 		fmt.Printf("[x] Received %s\n", msg.Body)
 		time.Sleep(time.Duration(processingTime) * time.Second) // Simulate processing
 		fmt.Println("[x] Done")
 		msg.Ack(false)
 	}
+}
+
+func startHTTPServer() {
+	http.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintln(w, "pong")
+	})
+	// Listening on port 8080; adjust as necessary.
+	log.Println("HTTP server started on :8080")
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
 func getEnv(key, fallback string) string {

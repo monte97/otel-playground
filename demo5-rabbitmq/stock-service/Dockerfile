@@ -1,21 +1,27 @@
-
-# Base Image
 FROM golang:latest
 
-# Set the Current Working Directory inside the container
 WORKDIR /app
 
-# Copy everything from the current directory to the PWD(Present Working Directory) inside the container
-COPY . .
+# Download and install Beyla binary
+RUN wget https://github.com/grafana/beyla/releases/download/v2.1.0/beyla-linux-amd64-v2.1.0.tar.gz && \
+    tar -xzf beyla-linux-amd64-v2.1.0.tar.gz && \
+    mv beyla /usr/local/bin/ && \
+    chmod +x /usr/local/bin/beyla && \
+    rm beyla-linux-amd64-v2.1.0.tar.gz
 
-# Download all the dependencies
+# Copy go.mod and go.sum first for caching
+COPY go.mod go.sum ./
 RUN go mod download
 
-# Build the Go app
+# Copy the rest of your application files
+COPY . .
+
+# Build your application
 RUN go build -o main .
 
-# Expose port 8080 to the outside world
 EXPOSE 8080
 
-# Command to run the executable
-CMD ["./main"]
+# Execute beyla
+#RUN /usr/local/bin/beyla
+
+CMD ["sh", "-c", "/usr/local/bin/beyla & ./main"]
