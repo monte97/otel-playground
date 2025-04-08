@@ -30,6 +30,10 @@ services:
       - RABBITMQ_URL=amqp://rabbitmq:5672  # URL di connessione a RabbitMQ
       - BEYLA_EXECUTABLE_NAME=main
       - BEYLA_TRACE_PRINTER=text
+      - BEYLA_LOG_LEVEL=debug
+      - BEYLA_BPF_DEBUG=1
+      - BEYLA_METRICS_EXPORTER=none
+      - BEYLA_GENERATE_ROOT_SPANS=true
     restart: unless-stopped
   
   # autoinstrumenter:
