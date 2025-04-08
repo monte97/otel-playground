@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  invoice-service:
+    build:
+      context: ./invoice-service
+      dockerfile: Dockerfile
+    ports:
+      - "8003:8000"
+    environment:
+      - ASPNETCORE_URLS=http://+:8000
+      - OTEL_RESOURCE_ATTRIBUTES=service.name=invoice-service,service.namespace=demo5
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://${OTEL_HOST}:${OTEL_COLLECTOR_PORT_GRPC}
+      - OTEL_EXPORTER_OTLP_INSECURE=true
+      - EXTERNAL_PING_URL=http://${OTEL_HOST}:8004/ping
+    restart: unless-stopped
+
+  stock-service:
+    build:
+      context: ./stock-service
+      dockerfile: Dockerfile
+    privileged: true  # Grants all necessary capabilities (recommended)
+    ports:
+      - "8004:8080"  # Eventuale esposizione di una porta per monitoraggio/healthcheck
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://${OTEL_HOST}:${OTEL_COLLECTOR_PORT_GRPC}
+      - OTEL_RESOURCE_ATTRIBUTES=service.name=stock-service,service.namespace=demo5
+      - BEYLA_BPF_ENABLE_CONTEXT_PROPAGATION=true
+      - OTEL_EXPORTER_OTLP_INSECURE=true
+      - RABBITMQ_URL=amqp://rabbitmq:5672  # URL di connessione a RabbitMQ
+      - BEYLA_EXECUTABLE_NAME=main
+      - BEYLA_TRACE_PRINTER=text
+    restart: unless-stopped
+  
+  # autoinstrumenter:
+  #   image: grafana/beyla:latest
+  #   pid: "service:service-stock"
+  #   privileged: true
+  #   environment:
+  #     BEYLA_TRACE_PRINTER: text
+  #     BEYLA_OPEN_PORT: 8443
+  
+
+volumes:
+  postgres_data:
+  mongo_data:
+  invoice_data:

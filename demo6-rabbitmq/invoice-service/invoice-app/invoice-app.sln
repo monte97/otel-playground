@@ -1,0 +1,16 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "invoice-app", "invoice-app.csproj", "{EFE603DC-46D0-4EF3-9F4D-AA1945D5DE2E}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{EFE603DC-46D0-4EF3-9F4D-AA1945D5DE2E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EFE603DC-46D0-4EF3-9F4D-AA1945D5DE2E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EFE603DC-46D0-4EF3-9F4D-AA1945D5DE2E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EFE603DC-46D0-4EF3-9F4D-AA1945D5DE2E}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
