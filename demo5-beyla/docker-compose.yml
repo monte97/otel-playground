@@ -36,14 +36,26 @@ services:
       - BEYLA_GENERATE_ROOT_SPANS=true
     restart: unless-stopped
   
-  # autoinstrumenter:
-  #   image: grafana/beyla:latest
-  #   pid: "service:service-stock"
-  #   privileged: true
-  #   environment:
-  #     BEYLA_TRACE_PRINTER: text
-  #     BEYLA_OPEN_PORT: 8443
-  
+  python-service:
+    build:
+      context: ./python-service
+      dockerfile: Dockerfile   
+    privileged: true  # Grants all necessary capabilities (recommended)
+    ports:
+      - "8005:5000"
+      - "8000:8000"
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://${OTEL_HOST}:${OTEL_COLLECTOR_PORT_GRPC}
+      - OTEL_RESOURCE_ATTRIBUTES=service.name=python-service,service.namespace=demo5
+      - BEYLA_BPF_ENABLE_CONTEXT_PROPAGATION=true
+      - OTEL_EXPORTER_OTLP_INSECURE=true
+      - BEYLA_EXECUTABLE_NAME=python
+      - BEYLA_TRACE_PRINTER=text
+      - BEYLA_LOG_LEVEL=debug
+      - BEYLA_BPF_DEBUG=1
+      - BEYLA_METRICS_EXPORTER=none
+      - BEYLA_GENERATE_ROOT_SPANS=true
+    restart: unless-stopped
 
 volumes:
   postgres_data:
