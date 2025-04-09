@@ -11,6 +11,17 @@ services:
       - order-service
       - inventory-service
     restart: unless-stopped
+  
+  rabbitmq:
+    image: rabbitmq:4-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    restart: unless-stopped
+
 
   order-service:
     build: ./order-service
@@ -53,8 +64,12 @@ services:
       - OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED=true
       - OTEL_PYTHON_LOG_LEVEL=debug
       - OTEL_EXPORTER_OTLP_INSECURE=true
+      - RABBITMQ_URL=amqp://rabbitmq:5672  # URL di connessione a RabbitMQ
+      - RABBITMQ_SUPPLY_REQUEST=${RABBITMQ_SUPPLY_REQUEST}
+      - RABBITMQ_SUPPLY_RESPONSE=${RABBITMQ_SUPPLY_RESPONSE}
     depends_on:
       - mongo
+      - rabbitmq
     restart: unless-stopped
 
   mongo:
@@ -90,30 +105,20 @@ services:
       - invoice_data:/var/lib/postgresql/data
       - ./invoice-service/init.sql:/docker-entrypoint-initdb.d/init.sql
   
-  rabbitmq:
-    image: rabbitmq:4-management
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-    environment:
-      RABBITMQ_DEFAULT_USER: guest
-      RABBITMQ_DEFAULT_PASS: guest
-    restart: unless-stopped
 
-  service-stock:
+  supply-service:
     build:
-      context: ./stock-service
+      context: ./supply-service
       dockerfile: Dockerfile
     privileged: true  # Grants all necessary capabilities (recommended)
     ports:
-      - "8004:8080"  # Eventuale esposizione di una porta per monitoraggio/healthcheck
+      - "8004:8000"  # Eventuale esposizione di una porta per monitoraggio/healthcheck
     environment:
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://${OTEL_HOST}:${OTEL_COLLECTOR_PORT_GRPC}
-      - OTEL_RESOURCE_ATTRIBUTES=service.name=stock-service,service.namespace=demo5
+      - OTEL_RESOURCE_ATTRIBUTES=service.name=supply-service,service.namespace=demo5
       - OTEL_EXPORTER_OTLP_INSECURE=true
       - RABBITMQ_URL=amqp://rabbitmq:5672  # URL di connessione a RabbitMQ
-      - BEYLA_EXECUTABLE_NAME=main
-      - BEYLA_TRACE_PRINTER=text
+      - RABBITMQ_SUPPLY_REQUEST=${RABBITMQ_SUPPLY_REQUEST}
     depends_on:
       - rabbitmq
     restart: unless-stopped

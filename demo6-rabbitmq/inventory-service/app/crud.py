@@ -4,6 +4,7 @@ from .models import Product
 from bson import ObjectId
 from fastapi import HTTPException
 from .database import products_collection  # Import the PyMongo collection
+from .messaging import client
 
 
 logger = logging.getLogger(__name__)
@@ -21,9 +22,9 @@ def product_helper(product) -> dict:
         "quantity": product["quantity"]
     }
 
-def avaiability_helper(product, requested_quantity) -> dict:
+def avaiability_helper(product, isAvaiable) -> dict:
     return {
-        "available": product["quantity"] >= requested_quantity
+        "available": isAvaiable
     }
 
 
@@ -32,7 +33,7 @@ def avaiability_helper(product, requested_quantity) -> dict:
 # ==========================
 
 # Get a single product by ID
-def get_product(product_id: str) -> dict:
+async def get_product(product_id: str) -> dict:
     query = {"_id": ObjectId(product_id)}
     logger.warn(f"Querying product with ID: {product_id}")
     start_time = time.time()
@@ -48,17 +49,21 @@ def get_product(product_id: str) -> dict:
     logger.warn(f"Increment search for {product['name']}")
     return product_helper(product)
 
-def check_availability(product_name: str, quantity: int) -> dict:
+async def check_availability(product_name: str, quantity: int) -> dict:
     logger.warn(f"Checking availability for product with name: {product_name}")
     
     query = {"name": product_name}
     product = products_collection.find_one(query)
     if product is not None:
-        return avaiability_helper(product, quantity)
+        if product["quantity"] >= quantity:
+            return avaiability_helper(product, True)
+        else:
+            await client.send_request(product["name"], product["quantity"], quantity)
+            return avaiability_helper(product, False)
     else:
         raise HTTPException(status_code=404, detail="Product not found")
 
-def reduce_quantity(product_name: str, quantity: int) -> dict:
+async def reduce_quantity(product_name: str, quantity: int) -> dict:
     logger.warn(f"Reducing quantity for product with name: {product_name}")
     
     # Ensure quantity to reduce is a positive integer
@@ -86,8 +91,33 @@ def reduce_quantity(product_name: str, quantity: int) -> dict:
 
     return product_helper(updated_product)
 
+
+async def increase_quantity(product_name: str, quantity: int) -> dict:
+    logger.warn(f"Increase quantity for product with name: {product_name}")
+    
+    # Ensure quantity to reduce is a positive integer
+    if quantity <= 0:
+        raise HTTPException(status_code=400, detail="Quantity must be a positive integer")
+
+    # Find the product by name
+    product = products_collection.find_one({"name": product_name})
+    logger.warn(f"Product found: {product}")
+
+    if product is None:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    # Reduce the quantity by the given amount
+    updated_product = products_collection.find_one_and_update(
+        {"name": product_name},  # Find the product by name
+        {"$inc": {"quantity": quantity}},  # Reduce the quantity by the specified amount
+        return_document=True  # Return the updated document
+    )
+    logger.warn(f"Product updated: {updated_product}")
+
+    return product_helper(updated_product)
+
 # Get a list of all products
-def get_products(skip: int = 0, limit: int = 100) -> list:
+async def get_products(skip: int = 0, limit: int = 100) -> list:
     query = {}
     logger.debug("Hola debug")
     logger.info(f"Querying all products with skip={skip} and limit={limit}")
@@ -101,7 +131,7 @@ def get_products(skip: int = 0, limit: int = 100) -> list:
     return [product_helper(product) for product in products]
 
 # Create a new product
-def create_product(product: Product) -> dict:
+async def create_product(product: Product) -> dict:
     product_dict = product.dict()
     logger.warn("Inserting new product")
     start_time = time.time()
@@ -114,7 +144,7 @@ def create_product(product: Product) -> dict:
     return product_helper(new_product)
 
 # Update an existing product
-def update_product(product_id: str, product: Product) -> dict:
+async def update_product(product_id: str, product: Product) -> dict:
     product_dict = product.dict(exclude_unset=True)
     query = {"_id": ObjectId(product_id)}
     logger.warn(f"Updating product with ID: {product_id}")
@@ -131,7 +161,7 @@ def update_product(product_id: str, product: Product) -> dict:
     return product_helper(updated_product)
 
 # Delete a product
-def delete_product(product_id: str) -> dict:
+async def delete_product(product_id: str) -> dict:
     query = {"_id": ObjectId(product_id)}
     logger.warn(f"Deleting product with ID: {product_id}")
     start_time = time.time()
@@ -146,7 +176,7 @@ def delete_product(product_id: str) -> dict:
     return {"message": "Product deleted successfully"}
 
 # Get the quantity of a product by ID
-def get_product_quantity(product_id: str) -> dict:
+async def get_product_quantity(product_id: str) -> dict:
     query = {"_id": ObjectId(product_id)}
     projection = {"quantity": 1}
     logger.warn(f"Querying quantity of product with ID: {product_id}")

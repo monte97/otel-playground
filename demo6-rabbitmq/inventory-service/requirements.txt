@@ -3,3 +3,4 @@ uvicorn
 motor
 psycopg2-binary
 python-dotenv
+aio_pika

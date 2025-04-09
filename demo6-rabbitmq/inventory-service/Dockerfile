@@ -27,7 +27,7 @@ COPY . .
 EXPOSE 8000
 
 CMD ["sh", "-c", "opentelemetry-instrument \
-    --traces_exporter console,otlp \
+    --traces_exporter otlp \
     --logs_exporter console,otlp \
     --metrics_exporter console \
     uvicorn app.main:app --host 0.0.0.0 --port 8000"]
