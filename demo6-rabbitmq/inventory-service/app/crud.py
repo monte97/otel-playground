@@ -6,7 +6,6 @@ from fastapi import HTTPException
 from .database import products_collection  # Import the PyMongo collection
 from .messaging import client
 
-
 logger = logging.getLogger(__name__)
 
 # ==========================

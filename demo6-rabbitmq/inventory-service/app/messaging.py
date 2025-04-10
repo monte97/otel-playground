@@ -5,6 +5,11 @@ import asyncio
 import logging
 import aio_pika
 from . import crud
+from opentelemetry.propagate import inject
+from opentelemetry import trace
+
+# Obtain the global tracer (assumes auto-instrumentation has set up the HTTP side)
+tracer = trace.get_tracer(__name__)
 
 logger = logging.getLogger(__name__)
 
@@ -36,34 +41,32 @@ class RabbitMQClient:
             await self.connection.close()
             logger.info("RabbitMQ connection closed")
     
-    async def on_response(self, message: aio_pika.IncomingMessage):
+    async def on_response(message: aio_pika.IncomingMessage):
         """
         Consume and log incoming messages on the reply queue.
         """
         async with message.process():
-            try:
-                payload = json.loads(message.body.decode())
-                logger.info(f"Received message on reply queue: {payload}")
-                await crud.increase_quantity(payload["item_id"], payload["new_quantity"])
-            except Exception as e:
-                logger.error(f"Failed to decode message: {e}")
+            # Extract trace context from the message headers (if present)
+            ctx = extract(message.headers or {})
 
-    # async def on_response(self, message: aio_pika.IncomingMessage):
-    #     async with message.process():
-    #         correlation_id = message.correlation_id
-    #         logger.info(f"Processing message with correlation_id '{correlation_id}'")
-    #         try:
-    #             payload = json.loads(message.body.decode())
-    #         except Exception as e:
-    #             logger.error(f"Failed to decode response message: {e}")
-    #             return
+            # Start a new span for handling the response message
+            with tracer.start_as_current_span("on_response", context=ctx, kind=trace.SpanKind.CONSUMER) as span:
+                span.set_attribute("messaging.system", "rabbitmq")
+                span.set_attribute("messaging.destination", message.routing_key)
+                if message.correlation_id:
+                    span.set_attribute("messaging.rabbitmq.correlation_id", message.correlation_id)
 
-    #         logger.info(f"Received reply for correlation_id '{correlation_id}': {payload}")
-    #         future = self.pending_requests.pop(correlation_id, None)
-    #         if future:
-    #             future.set_result(payload)
-    #         else:
-    #             logger.warning(f"No pending request for correlation_id '{correlation_id}'")
+                try:
+                    payload = json.loads(message.body.decode())
+                    logger.info(f"Received message on reply queue: {payload}")
+                    await crud.increase_quantity(payload["item_id"], payload["new_quantity"])
+                except Exception as e:
+                    # Record exception details to the span for better observability
+                    span.record_exception(e)
+                    span.set_attribute("error", True)
+                    logger.error(f"Failed to decode message: {e}")
+
+
 
     async def send_request(self, item_id: str, current_quantity: int, requested_quantity: int) -> None:
         """
@@ -72,6 +75,11 @@ class RabbitMQClient:
         """
         if not self.channel:
             raise Exception("RabbitMQ channel is not initialized.")
+
+        # Prepare headers and inject the current trace context into them.
+        headers = {}
+        inject(headers)  # This injects context like traceparent and tracestate if available
+
 
         correlation_id = str(uuid.uuid4())
         request_payload = {
@@ -88,6 +96,7 @@ class RabbitMQClient:
         await self.channel.default_exchange.publish(
             aio_pika.Message(
                 body=message_body,
+                headers=headers,
                 correlation_id=correlation_id,
                 content_type="application/json"
             ),

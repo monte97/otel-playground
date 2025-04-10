@@ -4,6 +4,10 @@ import asyncio
 import logging
 from fastapi import FastAPI
 import aio_pika
+from opentelemetry.propagate import extract
+from opentelemetry import trace
+
+tracer = trace.get_tracer(__name__)
 
 # Set up basic logging configuration
 logging.basicConfig(
@@ -49,63 +53,74 @@ async def shutdown():
 
 async def on_supply_request(message: aio_pika.IncomingMessage):
     async with message.process():
-        metrics["total_requests"] += 1
+        # Extract tracing context from headers and start a new consumer span
+        ctx = extract(message.headers or {})
+        with tracer.start_as_current_span("on_supply_request", context=ctx, kind=trace.SpanKind.CONSUMER) as span:
+            span.set_attribute("messaging.system", "rabbitmq")
+            span.set_attribute("messaging.destination", SUPPLY_QUEUE_NAME)
 
-        try:
-            payload = json.loads(message.body.decode())
-        except Exception as e:
-            metrics["failed_requests"] += 1
-            logger.error(f"Failed to decode message: {e}")
-            return
+            metrics["total_requests"] += 1
 
-        metrics["successful_requests"] += 1
-        logger.info(f"Received supply request message: {payload}")
+            try:
+                payload = json.loads(message.body.decode())
+            except Exception as e:
+                metrics["failed_requests"] += 1
+                span.record_exception(e)
+                span.set_attribute("error", True)
+                logger.error(f"Failed to decode message: {e}")
+                return
 
-        # Expected message format:
-        # {
-        #     "item_id": "string",             # Identifier of the item
-        #     "current_quantity": number,      # The current quantity of the item
-        #     "requested_quantity": number,    # The quantity requested/supplied
-        #     "reply_to": "reply_queue_name",    # Queue to send the reply
-        #     "correlation_id": "unique_id"      # ID to correlate request/response
-        # }
+            metrics["successful_requests"] += 1
+            logger.info(f"Received supply request message: {payload}")
 
-        item_id = payload.get("item_id")
-        current_quantity = payload.get("current_quantity")
-        requested_quantity = payload.get("requested_quantity")
-        reply_to = payload.get("reply_to")
-        correlation_id = payload.get("correlation_id")
+            # Expected message format:
+            # {
+            #     "item_id": "string",             # Identifier of the item
+            #     "current_quantity": number,      # The current quantity of the item
+            #     "requested_quantity": number,    # The quantity requested/supplied
+            #     "reply_to": "reply_queue_name",    # Queue to send the reply
+            #     "correlation_id": "unique_id"      # ID to correlate request/response
+            # }
 
-        # Business logic: calculate new quantity by adding the requested amount
-        new_quantity = current_quantity + requested_quantity  # sample logic
+            item_id = payload.get("item_id")
+            current_quantity = payload.get("current_quantity")
+            requested_quantity = payload.get("requested_quantity")
+            reply_to = payload.get("reply_to")
+            correlation_id = payload.get("correlation_id")
 
-        logger.info(
-            f"Processing supply request for item {item_id}: "
-            f"Current: {current_quantity}, "
-            f"Requested: {requested_quantity}, "
-            f"New Quantity: {new_quantity}"
-            f"Correlation: {correlation_id}, "
-        )
+            span.set_attribute("messaging.rabbitmq.correlation_id", correlation_id)
+            span.set_attribute("item.id", item_id)
 
-        # Build the reply message payload
-        response_payload = {
-            "item_id": item_id,
-            "new_quantity": new_quantity,
-            "correlation_id": correlation_id
-        }
+            # Business logic: calculate new quantity by adding the requested amount
+            new_quantity = current_quantity + requested_quantity  # sample logic
 
-        response_body = json.dumps(response_payload).encode()
+            logger.info(
+                f"Processing supply request for item {item_id}: "
+                f"Current: {current_quantity}, "
+                f"Requested: {requested_quantity}, "
+                f"New Quantity: {new_quantity}, "
+                f"Correlation: {correlation_id}"
+            )
 
-        # Publish the reply message to the specified reply_to queue
-        await app.state.channel.default_exchange.publish(
-            aio_pika.Message(
-                body=response_body,
-                correlation_id=correlation_id,
-                content_type="application/json"
-            ),
-            routing_key=reply_to
-        )
-        logger.info(f"Sent reply to '{reply_to}' with correlation_id '{correlation_id}'")
+            # Build the reply message payload
+            response_payload = {
+                "item_id": item_id,
+                "new_quantity": new_quantity,
+                "correlation_id": correlation_id
+            }
+
+            response_body = json.dumps(response_payload).encode()
+
+            # Publish the reply message to the specified reply_to queue
+            await app.state.channel.default_exchange.publish(
+                aio_pika.Message(
+                    body=response_body,
+                    correlation_id=correlation_id,
+                    content_type="application/json"
+                ),
+                routing_key=reply_to
+            )
+            logger.info(f"Sent reply to '{reply_to}' with correlation_id '{correlation_id}'")
 
 
 @app.get("/")
